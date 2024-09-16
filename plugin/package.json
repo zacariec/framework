@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "vite-plugin-framework",
+  "version": "0.1.0",
+  "description": "A vite plugin to build Shopify themes",
+  "main": ".",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "fast-glob": "^3.3.2",
+    "vite": "^5.4.5"
+  }
+}
