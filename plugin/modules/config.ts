@@ -1,4 +1,5 @@
 import path from "node:path";
+import glob from "fast-glob";
 
 import type { PluginOption, UserConfig } from "vite";
 import type { FrameworkOptions } from "../types";
