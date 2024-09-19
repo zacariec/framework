@@ -1,3 +1,5 @@
 export type FrameworkOptions = {
-  modulesDirectory?: string;
+  directory?: string;
+  snippet?: string;
+  client?: string;
 };
