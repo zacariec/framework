@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "target": "ES2020",
+    "module": "ESNext",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@/core/*": ["src/core/*"],
+      "@/config/*": ["src/config/*"],
+      "@/commands/*": ["src/commands/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/shopify/*": ["src/shopify/*"],
+      "@/types/*": ["src/types/*"],
+    }
+  },
+  "include": ["src/**/*"],
+}
