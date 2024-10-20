@@ -9,7 +9,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/zacariec/cli/core"
 	"github.com/zacariec/cli/shopify"
 	"github.com/zacariec/cli/utils"
 )
@@ -33,9 +33,9 @@ func init() {
 
 func runWatch(cmd *cobra.Command, args []string) {
 	// Use viper to get config values
-	storeURL := viper.GetString("store_url")
-	themeID := viper.GetString("theme_id")
-	accessToken := viper.GetString("access_token")
+	// storeURL := viper.GetString("store_url")
+	// themeID := viper.GetString("theme_id")
+	// accessToken := viper.GetString("access_token")
 
 	var err error
 	watchDir = "."
@@ -162,18 +162,18 @@ func processAndUploadFile(filePath string) {
 }
 
 func compileLiquid(content string) (string, error) {
-	tokens, err := compiler.Tokenize(content)
+	tokens, err := core.Tokenize(content)
 	if err != nil {
 		return "", fmt.Errorf("error tokenizing: %v", err)
 	}
 
-	ast, err := compiler.Parse(tokens)
+	ast, err := core.Parse(tokens)
 	if err != nil {
 		return "", fmt.Errorf("error parsing: %v", err)
 	}
 
 	Config.Set("development", true)
-	compiledContent, err := compiler.Compile(ast, Config)
+	compiledContent, err := core.Compile(ast, Config)
 	if err != nil {
 		return "", fmt.Errorf("error compiling: %v", err)
 	}
