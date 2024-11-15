@@ -1,60 +1,168 @@
-import { TokenType } from '../types';
+/* eslint-disable prefer-destructuring */
+import { LogError } from '@utils/logger.js';
+import { Token, TokenType, RootNode } from '../types/types.js';
 
-import type { ASTNode, ImportNode, RootNode, Token } from '../types';
-
-/**
- * Parses an array of tokens into an Abstract Syntax Tree (AST).
- * 
- * @param {Token[]} tokens - An array of tokens to be parsed.
- * @returns {ASTNode} The root node of the resulting Abstract Syntax Tree.
- * 
- * @description
- * This function creates a simple AST structure from the given tokens.
- * It creates a root node of type ROOT and adds each token as a child node.
- * Each child node preserves the type and value of its corresponding token.
- * 
- * @example
- * const tokens = [
- *   { type: TokenType.TEXT, value: 'Hello' },
- *   { type: TokenType.VARIABLE, value: '{{ name }}' }
- * ];
- * const ast = parse(tokens);
- * console.log(ast);
- * // Output:
- * // {
- * //   type: TokenType.ROOT,
- * //   value: '',
- * //   children: [
- * //     { type: TokenType.TEXT, value: 'Hello' },
- * //     { type: TokenType.VARIABLE, value: '{{ name }}' }
- * //   ]
- * // }
- */
 export function parse(tokens: Token[]): RootNode {
-  const root: RootNode = { type: 'ROOT', children: [] };
+  const ast: RootNode = {
+    type: 'ROOT',
+    children: [],
+  };
 
-  root.children = tokens.map((token): ASTNode => {
+  let current = 0;
+
+  while (current < tokens.length) {
+    const token = tokens[current];
+
     switch (token.type) {
       case TokenType.IMPORT:
-        return {
-          type: 'IMPORT',
-          value: token.value,
-          attributes: token.attributes || [],
-        } as ImportNode;
-      case TokenType.TEXT:
-        return { type: 'TEXT', value: token.value };
-      case TokenType.LIQUID_TAG:
-        return { type: 'LIQUID_TAG', value: token.value };
-      case TokenType.LIQUID_VARIABLE:
-        return { type: 'LIQUID_VARIABLE', value: token.value };
-      case TokenType.COMPONENT_RENDER:
-        return { type: 'COMPONENT_RENDER', value: token.value };
-      case TokenType.PROPS:
-        return { type: 'PROPS', value: token.value };
-      default:
-        throw new Error(`Unsupported token type: ${token}`);
-    }
-  });
+      case TokenType.IMPORT_NAMED: {
+        const isNamed = token.type === TokenType.IMPORT_NAMED;
+        let name;
+        let path;
+        let names;
 
-  return root;
+        if (isNamed) {
+          // Handle named imports like: {MyElement, MyOtherElement} from '../MyElement.ts'
+          const matches = token.value.match(/\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/);
+          if (matches) {
+            names = matches[1].split(',').map((n) => n.trim());
+            path = matches[2];
+          }
+        } else {
+          // Handle default imports like: MyTestComponent from '../MyTestComponent.ts'
+          const matches = token.value.match(/([^\s]+)\s+from\s+['"]([^'"]+)['"]/);
+          if (matches) {
+            name = matches[1];
+            path = matches[2];
+          }
+        }
+
+        ast.children.push({
+          type: 'IMPORT',
+          name: name || '',
+          path: path || '',
+          isNamed,
+          names,
+          attributes: token.attributes,
+          line: token.line,
+          column: token.column,
+        });
+        break;
+      }
+
+      case TokenType.PROPS: {
+        const name = token.value;
+        current++;
+
+        // Collect all content until PROPS_END
+        let content = '';
+        while (current < tokens.length && tokens[current].type !== TokenType.PROPS_END) {
+          if (tokens[current].type === TokenType.PROPS_CONTENT) {
+            content += tokens[current].value;
+          }
+          current++;
+        }
+
+        ast.children.push({
+          type: 'PROPS',
+          name,
+          content: content.trim(),
+          line: token.line,
+          column: token.column,
+        });
+        break;
+      }
+
+      case TokenType.USE: {
+        const matchingImportToken = tokens.find(
+          (importToken) =>
+            (importToken.type === TokenType.IMPORT ||
+              importToken.type === TokenType.IMPORT_NAMED) &&
+            importToken.attributes?.imports?.includes(token.value) === true &&
+            importToken,
+        );
+
+        console.log(matchingImportToken, token);
+
+        // TODO: Handle error for not being able to find matching import statement
+        if (!matchingImportToken) {
+          LogError(
+            `Failed to find matching import statement for ${token.value} on line: ${token.line}`,
+          );
+        }
+
+        // Parse component name and attributes
+        const componentName = token.value.trim().replace(/'/gm, '');
+        const attributes = token.attributes || {};
+
+        ast.children.push({
+          type: 'USE',
+          component: componentName,
+          props: attributes.props,
+          load: attributes.load.replace(/'/gm, '') as 'client' | 'server',
+          library: attributes.library.replace(/'/gm, ''),
+          name: attributes.name.replace(/'/gm, ''),
+          line: token.line,
+          column: token.column,
+          attributes: {
+            filepath: matchingImportToken?.attributes?.filepath,
+          },
+        });
+        break;
+      }
+
+      case TokenType.LIQUID_TAG: {
+        // Skip certain Liquid tags that we don't need to transform
+        if (
+          !token.value.startsWith('import') &&
+          !token.value.startsWith('props') &&
+          !token.value.startsWith('use')
+        ) {
+          ast.children.push({
+            type: 'LIQUID_TAG',
+            value: token.value,
+            line: token.line,
+            column: token.column,
+          });
+        }
+        break;
+      }
+
+      case TokenType.LIQUID_VARIABLE: {
+        ast.children.push({
+          type: 'LIQUID_VARIABLE',
+          value: token.value,
+          line: token.line,
+          column: token.column,
+        });
+        break;
+      }
+
+      case TokenType.HTML: {
+        ast.children.push({
+          type: 'HTML',
+          value: token.value,
+          line: token.line,
+          column: token.column,
+        });
+        break;
+      }
+
+      case TokenType.TEXT: {
+        ast.children.push({
+          type: 'TEXT',
+          value: token.value,
+          line: token.line,
+          column: token.column,
+        });
+        break;
+      }
+      default:
+        break;
+    }
+
+    current++;
+  }
+
+  return ast;
 }
