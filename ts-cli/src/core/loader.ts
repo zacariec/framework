@@ -7,18 +7,6 @@ import * as path from 'path';
  * @param {string} filePath - The path to the file to be loaded.
  * @returns {Promise<string>} A promise that resolves with the content of the file as a string.
  * @throws {Error} If the file cannot be read, with details about the failure.
- * 
- * @description
- * This function attempts to read the contents of a file at the specified path.
- * It uses UTF-8 encoding to read the file.
- * 
- * @example
- * try {
- *   const content = await loadFile('/path/to/file.txt');
- *   console.log(content);
- * } catch (error) {
- *   console.error(error.message);
- * }
  */
 export async function loadFile(filePath: string): Promise<string> {
   try {
@@ -34,22 +22,6 @@ export async function loadFile(filePath: string): Promise<string> {
  * 
  * @param {string} directoryPath - The path to the directory to load files from.
  * @returns {Promise<Map<string, string>>} A promise that resolves with a Map where keys are relative file paths and values are file contents.
- * 
- * @description
- * This function recursively traverses the given directory and its subdirectories,
- * loading all .liquid files it encounters. The resulting Map contains the relative
- * paths of the files (from the initial directory) as keys and their contents as values.
- * 
- * @example
- * try {
- *   const files = await loadDirectory('/path/to/templates');
- *   for (const [relativePath, content] of files) {
- *     console.log(`File: ${relativePath}`);
- *     console.log(`Content: ${content.substring(0, 100)}...`);
- *   }
- * } catch (error) {
- *   console.error('Error loading directory:', error);
- * }
  */
 export async function loadDirectory(directoryPath: string): Promise<Map<string, string>> {
   const files = new Map<string, string>();
