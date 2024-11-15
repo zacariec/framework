@@ -1,13 +1,10 @@
-/* vendor imports */
 import { Command } from 'commander';
-/* util imports */
+
+import buildCommand from '@commands/build.js';
+import deployCommand from '@commands/deploy.js';
+import watchCommand from '@commands/watch.js';
+import { LogError, LogInfo } from '@utils/logger.js';
 import { version } from '../../package.json';
-import { LogError, LogInfo } from '../utils/logger';
-/* user imports */
-import buildCommand from './build';
-import deployCommand from './deploy';
-import watchCommand from './watch';
-/* type imports */
 
 const program = new Command();
 
