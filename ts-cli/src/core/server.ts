@@ -1,49 +1,87 @@
-import http from 'node:http';
-import https from 'node:https';
-import { URL } from 'node:url';
+// import http from 'node:http';
+// import httpProxy from 'http-proxy';
+// import { parse as parseHtml } from 'node-html-parser';
 
-import { LogError, LogInfo } from '../utils/logger';
+// import type { ShopifyConfig } from '../types/types.js';
 
-import type { ShopifyConfig } from '../types';
+// function injectScripts(html: string, port: number, storeUrl: string): string {
+//   const root = parseHtml(html);
+//   const head = root.querySelector('head');
 
-export function createProxyServer(shopifyConfig: ShopifyConfig, port: number = 3000): Promise<http.Server> {
-  return new Promise((resolve, reject) => {
-    const server = http.createServer((request, response) => {
-      const targetUrl = new URL(`https://${shopifyConfig.storeUrl}${request.url}`);
+//   if (head) {
+//     const scriptTags = `
+//       <script src="http://localhost:1337/@vite/client"></script>
+//       <script type="module" src="http://localhost:1337/src/main.ts"></script>
+//     `;
+//     head.insertAdjacentHTML('beforeend', scriptTags);
+//   }
 
-      const options: https.RequestOptions = {
-        hostname: targetUrl.hostname,
-        port: 443,
-        path: targetUrl.pathname + targetUrl.search,
-        method: request.method,
-        headers: {
-          ...request.headers,
-          host: targetUrl.hostname,
-        },
-      };
+//   // Replace all absolute URLs with proxied URLs
+//   root.querySelectorAll('a[href], img[src], script[src], link[href]').forEach(el => {
+//     const attrName = el.tagName === 'LINK' || el.tagName === 'A' ? 'href' : 'src';
+//     const originalUrl = el.getAttribute(attrName);
+//     if (originalUrl) {
+//       if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
+//         const url = new URL(originalUrl);
+//         if (url.hostname === storeUrl) {
+//           el.setAttribute(attrName, `http://localhost:${port}${url.pathname}${url.search}`);
+//         }
+//       } else if (originalUrl.startsWith('/')) {
+//         el.setAttribute(attrName, `http://localhost:${port}${originalUrl}`);
+//       }
+//     }
+//   });
 
-      const proxyRequest = https.request(options, (proxyResponse) => {
-        response.writeHead(proxyResponse.statusCode || 500, proxyResponse.headers);
-        proxyResponse.pipe(response, { end: true });
-      });
+//   // Replace any remaining references to the store URL
+//   const modifiedHtml = root.toString().replace(new RegExp(storeUrl, 'g'), `localhost:${port}`);
 
-      request.pipe(proxyRequest, { end: true });
+//   return modifiedHtml;
+// }
 
-      proxyRequest.on('error', (error) => {
-        LogError(`Error proxying request: ${error.message}`);
-        response.writeHead(500, { 'Content-Type': 'text/plain' });
-        response.end('Error proxying request');
-      });
-    });
+// export function createProxyServer(shopifyConfig: ShopifyConfig, port: number = 3111): Promise<http.Server> {
+//   return new Promise((resolve, reject) => {
+//     const proxy = httpProxy.createProxyServer({
+//       target: `https://${shopifyConfig.storeUrl}`,
+//       changeOrigin: true,
+//       secure: false,
+//       autoRewrite: true,
+//       protocolRewrite: 'http',
+//     });
 
-    server.on('error', (error) => {
-      LogError(`Server error: ${error.message}`);
-      reject(error);
-    });
+//     proxy.on('proxyRes', (proxyRes, req, res) => {
+//       let body = '';
+//       proxyRes.on('data', (chunk) => {
+//         body += chunk;
+//       });
 
-    server.listen(port, () => {
-      LogInfo(`Server is running on port ${port}`);
-      resolve(server);
-    })
-  });
-}
+//       proxyRes.on('end', () => {
+//         if (proxyRes.headers['content-type']?.includes('text/html')) {
+//           const modifiedBody = injectScripts(body, port, shopifyConfig.storeUrl);
+//           res.setHeader('Content-Type', 'text/html');
+//           res.setHeader('Content-Length', Buffer.byteLength(modifiedBody));
+//           res.end(modifiedBody);
+//         } else {
+//           res.end(body);
+//         }
+//       });
+//     });
+
+//     const server = http.createServer((req, res) => {
+//       proxy.web(req, res, {}, (err) => {
+//         console.error('Proxy error:', err);
+//         res.writeHead(500, { 'Content-Type': 'text/plain' });
+//         res.end('Proxy error');
+//       });
+//     });
+
+//     server.on('error', (error) => {
+//       console.error(`Server error: ${error.message}`);
+//       reject(error);
+//     });
+
+//     server.listen(port, () => {
+//       console.log(`Proxy server is running on http://localhost:${port}`);
+//       resolve(server);
+//     });
+//   });
+// }
