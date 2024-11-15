@@ -1,92 +1,189 @@
-import { LIQUID_DELIMITERS } from '../constants/constants';
-import { TokenType, Token } from '../types';
+import { Token, TokenType } from '../types/types.js';
 
-/**
- * Tokenizes a string content into an array of tokens.
- * 
- * @param {string} content - The string content to be tokenized.
- * @returns {Token[]} An array of tokens extracted from the content.
- * 
- * @description
- * This function processes the input content line by line, identifying different types of tokens:
- * - PROPS: Content between props and endprops tags
- * - IMPORT: Import statements (including CSS and JS/TS imports)
- * - COMPONENT_RENDER: Component render statements
- * - LIQUID_TAG: Liquid tags
- * - LIQUID_VARIABLE: Liquid variables
- * - TEXT: Any other content
- * 
- * The function handles multi-line props by maintaining an internal state (inProps).
- * 
- * @example
- * const content = `
- * {% import 'styles.css' %}
- * {% import 'script.js' | defer | async %}
- * {% import MyComponent from 'components/MyComponent' %}
- * {% props myProps %}
- * { "key": "value" }
- * {% endprops %}
- * {{ myComponent | render: props }}
- * Some text
- * `;
- * const tokens = tokenize(content);
- * console.log(tokens);
- * // Output will be an array of Token objects representing the different parts of the input
- */
 export function tokenize(content: string): Token[] {
-  let inProps = false;
-  let propsContent = '';
-  let propsName = '';
+  const tokens: Token[] = [];
+  let current = 0;
+  let line = 1;
+  let column = 0;
 
-  return content.split('\n').reduce((tokens: Token[], line: string) => {
-    const trimmedLine = line.trim();
+  while (current < content.length) {
+    let char = content[current];
 
-    if (inProps) {
-      if (trimmedLine === `${LIQUID_DELIMITERS.TAG_OPEN} endprops ${LIQUID_DELIMITERS.TAG_CLOSE}`) {
-        inProps = false;
-        tokens.push({ type: TokenType.PROPS, value: `${propsName}\n${propsContent.trim()}` });
-        propsContent = '';
-      } else {
-        propsContent += `${line}\n`;
-      }
-    } else if (
-      trimmedLine.startsWith(`${LIQUID_DELIMITERS.TAG_OPEN} props`) &&
-      trimmedLine.endsWith(LIQUID_DELIMITERS.TAG_CLOSE)
-    ) {
-      inProps = true;
-      propsName = trimmedLine
-        .slice(LIQUID_DELIMITERS.TAG_OPEN.length + 7, -LIQUID_DELIMITERS.TAG_CLOSE.length)
-        .trim();
-    } else if (
-      trimmedLine.startsWith(`${LIQUID_DELIMITERS.TAG_OPEN} import`) &&
-      trimmedLine.endsWith(LIQUID_DELIMITERS.TAG_CLOSE)
-    ) {
-      const importMatch = trimmedLine.match(/{% import ['"](.+?)['"](\s*\|\s*(.+?))?\s*%}/);
-      if (importMatch) {
-        const [, filePath, , attributes] = importMatch;
-        tokens.push({
-          type: TokenType.IMPORT,
-          value: filePath,
-          attributes: attributes ? attributes.split('|').map(attr => attr.trim()) : []
-        });
-      } else {
-        // Handle component imports
-        tokens.push({ type: TokenType.IMPORT, value: trimmedLine, attributes: [] });
-      }
-    } else if (
-      trimmedLine.startsWith(LIQUID_DELIMITERS.OBJECT_OPEN) &&
-      trimmedLine.includes('|') &&
-      trimmedLine.endsWith(LIQUID_DELIMITERS.OBJECT_CLOSE)
-    ) {
-      tokens.push({ type: TokenType.COMPONENT_RENDER, value: trimmedLine });
-    } else if (trimmedLine.startsWith(LIQUID_DELIMITERS.TAG_OPEN)) {
-      tokens.push({ type: TokenType.LIQUID_TAG, value: trimmedLine });
-    } else if (trimmedLine.startsWith(LIQUID_DELIMITERS.OBJECT_OPEN)) {
-      tokens.push({ type: TokenType.LIQUID_VARIABLE, value: trimmedLine });
-    } else if (trimmedLine.length > 0) {
-      tokens.push({ type: TokenType.TEXT, value: line });
+    // Handle line and column tracking
+    if (char === '\n') {
+      line++;
+      column = 0;
+    } else {
+      column++;
     }
 
-    return tokens;
-  }, []);
+    // Handle Liquid tags
+    if (char === '{' && content[current + 1] === '%') {
+      let value = '';
+      current += 2; // Skip {%
+
+      // Skip whitespace
+      while (content[current] === ' ') current++;
+
+      // Check for import statement
+      if (content.slice(current, current + 6) === 'import') {
+        current += 6;
+        let importStatement = '';
+        const attributes: Record<string, any> = {
+          imports: [],
+          filepath: '',
+        };
+
+        // Collect the entire import statement
+        while (content[current] !== '%') {
+          importStatement += content[current];
+          current++;
+        }
+
+        // Parse import statement
+        const importParts = importStatement.trim().split(/\s+from\s+/);
+        if (importParts.length === 2) {
+          const componentName = importParts[0].trim();
+          const filepath = importParts[1].trim().replace(/['"]/g, '');
+
+          attributes.imports.push(componentName);
+          attributes.filepath = filepath;
+
+          tokens.push({
+            type: TokenType.IMPORT,
+            value: importStatement.trim(),
+            attributes,
+            line,
+            column,
+          });
+        } else {
+          // Handle invalid import statement
+          tokens.push({
+            type: TokenType.INVALID_IMPORT,
+            value: importStatement.trim(),
+            line,
+            column,
+          });
+        }
+
+        current += 2; // Skip %}
+        continue;
+      }
+
+      // Check for props
+      if (content.slice(current, current + 5) === 'props') {
+        current += 5;
+        let propsName = '';
+        while (content[current] !== '%') {
+          propsName += content[current];
+          current++;
+        }
+
+        tokens.push({
+          type: TokenType.PROPS,
+          value: propsName.trim(),
+          line,
+          column,
+        });
+
+        current += 2; // Skip %}
+        continue;
+      }
+
+      // Check for use statement
+      if (content.slice(current, current + 3) === 'use') {
+        current += 3;
+        const attributes: Record<string, string> = {};
+        let useStatement = '';
+
+        while (content[current] !== '%') {
+          if (content[current] === '|') {
+            current++;
+            let attrString = '';
+            while (content[current] !== '%' && content[current] !== '|') {
+              attrString += content[current];
+              current++;
+            }
+            // eslint-disable-next-line no-shadow
+            const [key, value] = attrString.split(':').map((s) => s.trim());
+            attributes[key.replace(/"/g, '')] = value.replace(/"/g, '');
+          } else {
+            useStatement += content[current];
+            current++;
+          }
+        }
+
+        tokens.push({
+          type: TokenType.USE,
+          value: useStatement.trim(),
+          attributes,
+          line,
+          column,
+        });
+
+        current += 2; // Skip %}
+        continue;
+      }
+
+      // Regular Liquid tag
+      while (content[current] !== '%' || content[current + 1] !== '}') {
+        value += content[current];
+        current++;
+      }
+
+      tokens.push({
+        type: TokenType.LIQUID_TAG,
+        value: value.trim(),
+        line,
+        column,
+      });
+
+      current += 2; // Skip %}
+      continue;
+    }
+
+    // Handle Liquid variables
+    if (char === '{' && content[current + 1] === '{') {
+      let value = '';
+      current += 2;
+
+      while (content[current] !== '}' || content[current + 1] !== '}') {
+        value += content[current];
+        current++;
+      }
+
+      tokens.push({
+        type: TokenType.LIQUID_VARIABLE,
+        value: value.trim(),
+        line,
+        column,
+      });
+
+      current += 2;
+      continue;
+    }
+
+    // Handle text
+    let text = '';
+
+    while (
+      current < content.length &&
+      !(char === '{' && (content[current + 1] === '%' || content[current + 1] === '{'))
+    ) {
+      text += char;
+      current++;
+      char = content[current];
+    }
+
+    if (text) {
+      tokens.push({
+        type: TokenType.TEXT,
+        value: text,
+        line,
+        column,
+      });
+    }
+  }
+
+  return tokens;
 }
