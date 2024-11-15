@@ -32,6 +32,7 @@ export async function processFile(filePath: string): Promise<void> {
 
   try {
     const content = await fs.readFile(filePath, 'utf-8');
+    const sanitizedPath = sanitizeFilePath(filePath);
     let compiledContent: string;
 
     // Compile all Liquid files
@@ -45,13 +46,11 @@ export async function processFile(filePath: string): Promise<void> {
 
     // For layout files, inject scripts after compilation
     let uploadContent: string;
-    if (filePath.startsWith('layout/') && path.extname(filePath) === '.liquid') {
+    if (sanitizedPath.startsWith('layout/') && path.extname(sanitizedPath) === '.liquid') {
       uploadContent = await injectScripts(compiledContent);
     } else {
       uploadContent = compiledContent;
     }
-
-    const sanitizedPath = sanitizeFilePath(filePath);
 
     console.log(uploadContent);
     // Upload the content
@@ -67,4 +66,3 @@ export async function processFile(filePath: string): Promise<void> {
     LogError(`Error processing ${filePath}: ${error}`);
   }
 }
-
