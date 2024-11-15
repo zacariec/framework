@@ -1,15 +1,15 @@
-import { ShopifyConfig, ThemeInfo } from '../types';
-import { LogError } from '../utils/logger';
+import { LogInfo, LogSuccess } from '@utils/logger.js';
+import type { ShopifyConfig, ThemeInfo } from '../types/types.js';
 
 /**
  * Represents an API client for interacting with Shopify's GraphQL API.
  */
-class ShopifyAPI {
+export class ShopifyAPI {
   private baseUrl: string;
 
   private headers: HeadersInit;
 
-  private themeId: number;
+  private themeId: string;
 
   /**
    * Creates an instance of ShopifyAPI.
@@ -17,12 +17,12 @@ class ShopifyAPI {
    */
   constructor(config: ShopifyConfig) {
     // TODO: add api version to config.
-    this.baseUrl = `https://${config.storeUrl}/admin/api/unstable/graphql.json`;
+    this.baseUrl = `${config.shopifyUrl}/admin/api/unstable/graphql.json`;
     this.headers = {
       'Content-Type': 'application/json',
       'X-Shopify-Access-Token': config.accessToken,
     };
-    this.themeId = config.themeId;
+    this.themeId = `gid://shopify/OnlineStoreTheme/${config.themeId}`;
   }
 
   /**
@@ -44,7 +44,9 @@ class ShopifyAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(
+        `HTTP error! status: ${response.status} ${JSON.stringify(await response.json())}`,
+      );
     }
 
     const data = await response.json();
@@ -62,38 +64,45 @@ class ShopifyAPI {
    * @param {string} content - The content of the file to be uploaded.
    * @throws {Error} If the upload fails or if the API returns user errors.
    */
-  async uploadFile(path: string, content: string): Promise<void> {
+  async uploadFile(filename: string, content: string): Promise<void> {
+    LogInfo(`Uploading ${filename}`);
     const query = `
-            mutation assetUpdate($input: AssetInput!) {
-                assetUpdate(input: $input) {
-                    asset {
-                        key
-                    }
-                    userErrors {
-                        field
-                        message
-                    }
-                }
-            }
-        `;
+      mutation themeFilesUpsert($files: [OnlineStoreThemeFilesUpsertFileInput!]!, $themeId: ID!) {
+        themeFilesUpsert(files: $files, themeId: $themeId) {
+          upsertedThemeFiles {
+            filename
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
 
     const variables = {
-      input: {
-        key: path,
-        themeId: this.themeId,
-        value: content,
-      },
+      themeId: this.themeId,
+      files: [
+        {
+          filename,
+          body: {
+            type: 'TEXT',
+            value: content,
+          },
+        },
+      ],
     };
 
-    try {
-      const response = await this.graphqlRequest(query, variables);
-      if (response.assetUpdate.userErrors.length > 0) {
-        throw new Error(response.assetUpdate.userErrors[0].message);
-      }
-    } catch (error) {
-      LogError(`Failed to upload file ${path}`, error as Error);
-      throw error;
+    const response = (await this.graphqlRequest(query, variables)) as Record<string, unknown>;
+    // eslint-disable-next-line prefer-destructuring
+    const userErrors = response.themeFilesUpsert.userErrors;
+    if (userErrors && userErrors.length > 0) {
+      throw new Error(`Failed to upload file: ${userErrors[0].message}`);
     }
+
+    LogSuccess(`Finished uploading ${filename}`);
+
+    return;
   }
 
   /**
@@ -101,34 +110,31 @@ class ShopifyAPI {
    * @param {string} path - The path of the file to be deleted.
    * @throws {Error} If the deletion fails or if the API returns user errors.
    */
-  async deleteFile(path: string): Promise<void> {
+  async deleteFile(filename: string): Promise<void> {
     const query = `
-            mutation assetDelete($input: AssetDeleteInput!) {
-                assetDelete(input: $input) {
-                    deletedAssetId
-                    userErrors {
-                        field
-                        message
-                    }
-                }
-            }
-        `;
+      mutation themeFilesDelete($themeId: ID!, $files: [String!]!) {
+        themeFilesDelete(themeId: $themeId, files: $files) {
+          deletedThemeFiles {
+            filename
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
 
     const variables = {
-      input: {
-        key: path,
-        themeId: this.themeId,
-      },
+      themeId: this.themeId,
+      files: [filename],
     };
 
-    try {
-      const response = await this.graphqlRequest(query, variables);
-      if (response.assetDelete.userErrors.length > 0) {
-        throw new Error(response.assetDelete.userErrors[0].message);
-      }
-    } catch (error) {
-      LogError(`Failed to delete file ${path}`, error as Error);
-      throw error;
+    const response = await this.graphqlRequest(query, variables);
+    // eslint-disable-next-line prefer-destructuring
+    const userErrors = response.themeFilesDelete.userErrors;
+    if (userErrors && userErrors.length > 0) {
+      throw new Error(`Failed to delete file: ${userErrors[0].message}`);
     }
   }
 
@@ -151,13 +157,8 @@ class ShopifyAPI {
       id: `gid://shopify/Theme/${this.themeId}`,
     };
 
-    try {
-      const response = await this.graphqlRequest(query, variables);
-      return response.theme as ThemeInfo;
-    } catch (error) {
-      LogError(`Failed to get theme info`, error as Error);
-      throw error;
-    }
+    const response = await this.graphqlRequest(query, variables);
+    return response.theme as ThemeInfo;
   }
 }
 
