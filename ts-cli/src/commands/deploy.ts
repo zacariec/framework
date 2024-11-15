@@ -4,13 +4,13 @@ import path from 'path';
 /* npm imports */
 import { Command } from 'commander';
 /* user imports */
-import { loadFrameworkConfig } from '../config/config';
-import { createShopifyAPI } from '../shopify/api';
+import { loadFrameworkConfig } from '@config/config.js';
+import { createShopifyAPI } from '@shopify/api.js';
 /* type imports */
-import type { DeployCommandOptions, FrameworkConfig, ShopifyConfig } from '../types';
+import type { DeployCommandOptions, FrameworkConfig, ShopifyConfig } from '../types/types.js';
 /* utils imports */
-import createConfigFromOptions from '../utils/config';
-import { LogError, LogInfo, LogSuccess } from '../utils/logger';
+import createConfigFromOptions from '@utils/config.js';
+import { LogError, LogInfo, LogSuccess } from '@utils/logger.js';
 
 /**
  * Uploads files from the specified output directory to Shopify, respecting ignore patterns.
