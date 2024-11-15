@@ -1,22 +1,58 @@
 {
   "compilerOptions": {
-    "baseUrl": "./",
+    "jsx": "react",
+    "baseUrl": ".",
     "target": "ES2020",
-    "module": "ESNext",
+    "module": "Node16",
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "esModuleInterop": true,
     "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "types": [
+      "vite/client"
+    ],
     "paths": {
-      "@/core/*": ["src/core/*"],
-      "@/config/*": ["src/config/*"],
-      "@/commands/*": ["src/commands/*"],
-      "@/utils/*": ["src/utils/*"],
-      "@/shopify/*": ["src/shopify/*"],
-      "@/types/*": ["src/types/*"],
+      "@commands/*": [
+        "src/commands/*"
+      ],
+      "@components/*": [
+        "src/components/*"
+      ],
+      "@constants/*": [
+        "src/constants/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@core/*": [
+        "src/core/*"
+      ],
+      "@shopify/*": [
+        "src/shopify/*"
+      ],
+      "@types/*": [
+        "src/types/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ],
+      "react": [
+        "./node_modules/preact/compat/"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/preact/jsx-runtime"
+      ],
+      "react-dom": [
+        "./node_modules/preact/compat/"
+      ],
+      "react-dom/*": [
+        "./node_modules/preact/compat/*"
+      ]
     }
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*"
+  ]
 }
