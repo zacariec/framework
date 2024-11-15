@@ -1,10 +1,15 @@
-import * as fs from 'fs/promises';
-import path from 'path';
-import { pathToFileURL } from 'url';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-import { CONFIG_FILE_NAMES } from '../constants/constants';
-import type { FrameworkConfig } from '../types';
-import { LogError } from '../utils/logger';
+import { pathToFileURL } from 'node:url';
+
+import { nanoid } from 'nanoid';
+
+import { createShopifyAPI } from '@shopify/api.js';
+import { CONFIG_FILE_NAMES } from '@constants/constants.js';
+import { LogError } from '@utils/logger.js';
+
+import type { CommandOptions, FrameworkConfig, GlobalConfig } from '../types/types.js';
 
 /**
  * Checks if a file exists at the given path.
@@ -35,7 +40,9 @@ async function findConfigFile(directory: string): Promise<string | null> {
   return existingFilePaths.find((filePath) => filePath !== null) || null;
 }
 
-export async function checkConfigOrOptions(options: any): Promise<void> {
+export async function checkConfigOrOptions(
+  options: Record<string, string | undefined>,
+): Promise<void> {
   const configPath = await findConfigFile(process.cwd());
 
   if (!configPath) {
@@ -43,7 +50,9 @@ export async function checkConfigOrOptions(options: any): Promise<void> {
     const missingOptions = requiredOptions.filter((option) => !options[option]);
 
     if (missingOptions.length > 0) {
-      throw new Error(`No config file found and missing required options: ${missingOptions.join(', ')}`);
+      throw new Error(
+        `No config file found and missing required options: ${missingOptions.join(', ')}`,
+      );
     }
   }
 }
@@ -53,7 +62,7 @@ export async function checkConfigOrOptions(options: any): Promise<void> {
  * @param {string} [configPath] - Optional path to the configuration file.
  * @returns {Promise<FrameworkConfig>} A promise that resolves to the loaded framework configuration.
  * @throws {Error} If no config file is found or if there's an error loading the configuration.
- */ 
+ */
 // eslint-disable-next-line consistent-return
 export async function loadFrameworkConfig(configPath?: string): Promise<FrameworkConfig> {
   let finalConfigPath: string;
@@ -108,3 +117,89 @@ export async function loadFrameworkConfig(configPath?: string): Promise<Framewor
     process.exit(1);
   }
 }
+
+export function setupGlobalConfig(options: CommandOptions, frameworkConfig: FrameworkConfig): void {
+  const environment = options.environment || 'development';
+  const envConfig = frameworkConfig.framework.environments[environment];
+
+  if (!envConfig) {
+    throw new Error(`Environment "${environment}" not found in configuration`);
+  }
+
+  const rootPath = process.cwd();
+  const inputPath =
+    options.input || envConfig.input
+      ? path.resolve(rootPath, options.input || envConfig.input)
+      : rootPath;
+  const outputPath =
+    options.output || envConfig.output
+      ? path.resolve(rootPath, options.output || envConfig.output)
+      : path.resolve(rootPath, 'dist');
+
+  // Extract store name from Shopify URL
+  const shopifyUrl =
+    'https://' +
+    (options.storeUrl || envConfig.shopifyUrl).replace('http://', '').replace('https://', '');
+  const storeName = shopifyUrl.replace(/^https?:\/\//, '').split('.')[0];
+
+  const vitePort = frameworkConfig.vite?.server?.port || 5173;
+  const viteAssetDirectory = envConfig.viteAssetDirectory || 'src';
+
+  globalThis.config = {
+    // Framework configuration
+    frameworkConfig,
+
+    // Environment
+    environment,
+    isDevelopment: environment === 'development',
+    isProduction: environment === 'production',
+    isWatching: true,
+
+    // Paths
+    rootPath,
+    inputPath,
+    outputPath,
+    assetsPath: path.join(outputPath, 'assets'),
+    srcPath: path.join(inputPath, 'src'),
+
+    // Theme structure paths
+    layoutsPath: path.join(inputPath, 'layout'),
+    sectionsPath: path.join(inputPath, 'sections'),
+    snippetsPath: path.join(inputPath, 'snippets'),
+    templatesPath: path.join(inputPath, 'templates'),
+    configPath: path.join(inputPath, 'config'),
+
+    // Server configuration
+    port: frameworkConfig.framework.port || 3000,
+    vitePort,
+    viteServerUrl: `http://localhost:${vitePort}`,
+
+    // Shopify configuration
+    shopify: {
+      themeId: Number(options.themeId || envConfig.themeId),
+      shopifyUrl,
+      accessToken: options.accessToken || envConfig.accessToken,
+      ignores: envConfig.ignores || [],
+      apiVersion: '2024-01',
+      storeName,
+    },
+
+    // Initialize Shopify client
+    shopifyClient: createShopifyAPI({
+      themeId: Number(options.themeId || envConfig.themeId),
+      shopifyUrl,
+      accessToken: options.accessToken || envConfig.accessToken,
+    }),
+
+    // Build configuration
+    timestamp: Date.now(),
+    buildId: nanoid(),
+
+    // Cache and temporary storage
+    cache: {
+      compiledTemplates: new Map(),
+      processedAssets: new Set(),
+    },
+  } as GlobalConfig;
+}
+
