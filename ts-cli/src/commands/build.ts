@@ -4,13 +4,13 @@ import path from 'path';
 import { Command } from 'commander';
 import { build as viteBuild, type UserConfig as ViteUserConfig } from 'vite';
 /* user imports */
-import { loadFrameworkConfig } from '../config/config';
-import { compile } from '../core/compiler';
-import { parse } from '../core/parser';
-import { tokenize } from '../core/tokenizer';
+import { compile } from '@core/compiler.js';
+import { parse } from '@core/parser.js';
+import { tokenize } from '@core/tokenizer.js';
+import { loadFrameworkConfig } from '@config/config.js';
+import { LogInfo, LogError, LogSuccess } from '@utils/logger.js';
 /* type imports */
-import type { BuildCommandOptions, FrameworkConfig } from '../types';
-import { LogInfo, LogError, LogSuccess } from '../utils/logger';
+import type { BuildCommandOptions, FrameworkConfig } from '../types/types.js';
 
 /**
  * Creates a config object from command line options.
