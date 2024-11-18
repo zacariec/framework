@@ -75,7 +75,6 @@ const watch = new Command('watch')
         },
       );
 
-      console.log(globalThis.config.shopify.shopifyUrl);
       const storefrontUrl = new URL(globalThis.config.shopify.shopifyUrl);
       storefrontUrl.searchParams.append(
         'preview_theme_id',
