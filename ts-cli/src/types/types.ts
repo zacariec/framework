@@ -1,4 +1,5 @@
 import type { UserConfig as ViteUserConfig } from 'vite';
+import type { WebSocketServer } from 'ws';
 import { ShopifyAPI } from '../shopify/api.js';
 
 export enum TokenType {
@@ -178,6 +179,7 @@ export interface GlobalConfig {
   configPath: string;
 
   // Server configuration
+  websocketServer: WebSocketServer;
   port: number;
   vitePort: number;
   viteServerUrl: string;
@@ -207,4 +209,3 @@ declare global {
   // eslint-disable-next-line vars-on-top, no-var
   var config: GlobalConfig;
 }
-
