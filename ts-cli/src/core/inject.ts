@@ -12,7 +12,73 @@ export async function injectScripts(content: string): Promise<string> {
 
     // Create the injection content
     const injectContent = `
-    ${isDevelopment ? `<script type="module" src="${viteServerUrl}/@vite/client"></script>` : ''}
+    ${
+      isDevelopment
+        ? `
+<script type="module" src="${viteServerUrl}/@vite/client"></script>
+<script type="module">
+  window.FrameworkServer = ${JSON.stringify(globalThis.config.websocketServer.address())}
+class FrameworkOverlay extends HTMLElement {
+  constructor() {
+    super();
+    this.events = {
+      open: 'open',
+      close: 'close',
+    };
+    this.open = false;
+    this.ws = new WebSocket("http://localhost:" + window.FrameworkServer.port);
+
+  }
+
+  toggleClose() {
+    this.open = false;
+    this.render();
+  }
+
+  toggleOpen() {
+    this.open = true;
+    this.render();
+    this.focus();
+  }
+
+  subscribeToEvents() {
+    this.addEventListener(this.events.open, this.toggleOpen.bind(this));
+    this.addEventListener(this.events.close, this.toggleClose.bind(this));
+    this.addEventListener('keyup', (event) => {
+      if (event.key === 'Escape') {
+        this.toggleClose();
+      }
+    });
+  
+    this.ws.onclose = (event) => {
+      console.log(this.ws.CLOSED, event);
+    };
+    this.ws.onmessage = (event) => {
+      console.log(event);
+    };
+  }
+
+  render(error) {
+    if (this.open === false) {
+      return "";
+    }
+
+    this.innerHTML = "" + "<div>" + error + "</div>";
+    return;
+  }
+
+  connectedCallback() {
+    this.subscribeToEvents();
+
+    this.render();
+  }
+}
+
+window.customElements.get('framework-overlay') || window.customElements.define('framework-overlay', FrameworkOverlay)
+</script>
+          `
+        : ''
+    }
     <script type="module">
       // Initialize the framework
 
@@ -159,9 +225,9 @@ class FrameworkIsland extends HTMLElement {
 window.customElements.get("framework-island") ||
   window.customElements.define("framework-island", FrameworkIsland)
 
-      var server = new WebSocket();
-
     </script>
+
+    <framework-overlay></framework-overlay>
     `;
 
     // Find the head closing tag and inject our content
