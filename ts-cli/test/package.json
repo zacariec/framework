@@ -1,0 +1,21 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "lit": "^3.2.1",
+    "preact": "^10.24.3",
+    "preact-custom-element": "^4.3.0",
+    "svelte": "^5.2.0",
+    "vue": "^3.5.12"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^4.0.0"
+  }
+}

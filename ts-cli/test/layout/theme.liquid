@@ -1,0 +1,26 @@
+{% import MyComponent from '../src/lit.ts' %}
+{% import PreactComponent from '../src/preact.tsx' %}
+{% import SvelteComponent from '../src/svelte.svelte' %}
+{% import VueComponent from '../src/vue.ts' %}
+{% import VanillaComponent from '../src/vanilla.ts' %}
+
+<!doctype html>
+<html>
+  <head>
+    {{ content_for_header }}
+  </head>
+  <body>
+    {{ content_for_layout }}
+    {% import '../src/mycss.css' %}
+    {% use 
+      MyComponent 
+      | library: 'lit' 
+      | load: 'load' 
+      | name: 'my-component' 
+    %}
+    {% use PreactComponent | library: 'preact' | load: 'load' | name: 'preact-component' %}
+    {% use SvelteComponent | library: 'svelte' | load: 'load' | name: 'svelte-component' %}
+    {% use VueComponent | library: 'vue' | load: 'load' | name: 'vue-component' %}
+    {% use VanillaComponent | library: 'vanilla' | load: 'load' | name: 'vanilla-component' %}
+  </body>
+</html>
