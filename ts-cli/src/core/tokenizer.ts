@@ -26,7 +26,7 @@ export function tokenize(content: string): Token[] {
       while (content[current] === ' ') current++;
 
       // Check for import statement
-      if (content.slice(current, current + 6) === 'import') {
+      if (content.slice(current, current + 6) === 'import' || content.slice(current, current + 7) === 'import ') {
         current += 6;
         let importStatement = '';
         const attributes: Record<string, any> = {
@@ -49,6 +49,16 @@ export function tokenize(content: string): Token[] {
           attributes.imports.push(componentName);
           attributes.filepath = filepath;
 
+          tokens.push({
+            type: TokenType.IMPORT,
+            value: importStatement.trim(),
+            attributes,
+            line,
+            column,
+          });
+        } else if (importStatement.trim().startsWith("'") || importStatement.trim().startsWith('"')) {
+          // Handle direct file import (e.g., import '../src/mycss.css')
+          attributes.filepath = importStatement.trim().replace(/['"]/g, '');
           tokens.push({
             type: TokenType.IMPORT,
             value: importStatement.trim(),
