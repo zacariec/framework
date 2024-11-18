@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { nanoid } from 'nanoid';
+import { WebSocketServer } from 'ws';
 
 import { createShopifyAPI } from '@shopify/api.js';
 import { CONFIG_FILE_NAMES } from '@constants/constants.js';
@@ -121,6 +122,9 @@ export async function loadFrameworkConfig(configPath?: string): Promise<Framewor
 export function setupGlobalConfig(options: CommandOptions, frameworkConfig: FrameworkConfig): void {
   const environment = options.environment || 'development';
   const envConfig = frameworkConfig.framework.environments[environment];
+  const websocketServer = new WebSocketServer({
+    port: 8080, // TODO: Generate a port number
+  });
 
   if (!envConfig) {
     throw new Error(`Environment "${environment}" not found in configuration`);
@@ -170,6 +174,7 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
     configPath: path.join(inputPath, 'config'),
 
     // Server configuration
+    websocketServer,
     port: frameworkConfig.framework.port || 3000,
     vitePort,
     viteServerUrl: `http://localhost:${vitePort}`,
@@ -200,6 +205,5 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
       compiledTemplates: new Map(),
       processedAssets: new Set(),
     },
-  } as GlobalConfig;
+  } satisfies GlobalConfig;
 }
-
