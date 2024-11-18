@@ -74,6 +74,7 @@ export function parse(tokens: Token[]): RootNode {
       }
 
       case TokenType.USE: {
+        // get the matching import token.
         const matchingImportToken = tokens.find(
           (importToken) =>
             (importToken.type === TokenType.IMPORT ||
@@ -81,8 +82,6 @@ export function parse(tokens: Token[]): RootNode {
             importToken.attributes?.imports?.includes(token.value) === true &&
             importToken,
         );
-
-        console.log(matchingImportToken, token);
 
         // TODO: Handle error for not being able to find matching import statement
         if (!matchingImportToken) {
