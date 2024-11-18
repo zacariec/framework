@@ -63,6 +63,7 @@ function compileNode(node: ASTNode): Promise<string> {
 
       // Handle CSS files
       if (ext === 'css') {
+
         if (isDevelopment) {
           return Promise.resolve(`<link rel="stylesheet" href="${viteServerUrl}${node.path}">`);
         }
