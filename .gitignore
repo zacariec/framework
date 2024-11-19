@@ -9,3 +9,12 @@ ehthumbs.db
 Thumbs.db
 /node_modules/
 **/node_modules/
+**/test/templates
+**/test/snippets
+**/test/sections
+**/test/assets
+**/test/locales
+**/test/config
+**/test/layout
+**/framework.config.ts
+!**/test/layout/theme.liquid
