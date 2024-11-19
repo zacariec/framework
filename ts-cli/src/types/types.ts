@@ -22,6 +22,8 @@ export interface Token {
   attributes?: Record<string, string>;
   line?: number;
   column?: number;
+  hasOpeningHyphen?: boolean;
+  hasClosingHyphen?: boolean;
 }
 
 export interface BaseASTNode {
@@ -68,6 +70,8 @@ export interface TextNode extends BaseASTNode {
 export interface LiquidNode extends BaseASTNode {
   type: 'LIQUID_TAG' | 'LIQUID_VARIABLE';
   value: string;
+  hasOpeningHyphen?: boolean;
+  hasClosingHyphen?: boolean;
 }
 
 export interface HTMLNode extends BaseASTNode {

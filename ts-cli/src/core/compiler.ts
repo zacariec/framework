@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { extname } from 'node:path';
 import { build } from 'vite';
 
 import type { ASTNode, RootNode } from '../types/types.js';
@@ -50,11 +50,21 @@ async function compileWithVite(filePath: string, isCSS: boolean = false) {
   }
 }
 
+function normalizePathForVite(path: string): string {
+  const currentEnvironment = globalThis.config.environment;
+  const { viteAssetDirectory } =
+    globalThis.config.frameworkConfig.framework.environments[currentEnvironment];
+  const normalizedPath = path.replace(`/${viteAssetDirectory}`, '');
+
+  return globalThis.config.viteServerUrl + normalizedPath;
+}
+
 function compileNode(node: ASTNode): Promise<string> {
   switch (node.type) {
     case 'IMPORT': {
       const { isDevelopment, viteServerUrl } = globalThis.config;
-      const ext = node.path.split('.').pop();
+      const ext = extname(node.path);
+      const filepath = normalizePathForVite(new URL(node.path, viteServerUrl).pathname);
 
       // Skip component imports as they're handled by the framework-island
       if (node.isNamed) {
@@ -62,12 +72,12 @@ function compileNode(node: ASTNode): Promise<string> {
       }
 
       // Handle CSS files
-      if (ext === 'css') {
-
+      if (ext === '.css') {
         if (isDevelopment) {
-          return Promise.resolve(`<link rel="stylesheet" href="${viteServerUrl}${node.path}">`);
+          return Promise.resolve(`<link rel="stylesheet" href="${filepath}">`);
         }
         // In production, compile and inline the CSS
+        // TODO: Fix - I know this will break due to the path being ../src
         return compileWithVite(node.path, true).then((css) => {
           if (!css) return '<!-- Error processing CSS file -->';
           return `<style>${css}</style>`;
@@ -75,16 +85,14 @@ function compileNode(node: ASTNode): Promise<string> {
       }
 
       // Handle TypeScript/JavaScript files
-      if (ext === 'ts' || ext === 'js') {
+      if (ext === '.ts' || ext === '.js') {
         const attrs = node.attributes || {};
         const attrString = Object.entries(attrs)
           .map(([key, value]) => `${key}="${value}"`)
           .join(' ');
 
         if (isDevelopment) {
-          return Promise.resolve(
-            `<script type="module" ${attrString} src="${viteServerUrl}${node.path}"></script>`,
-          );
+          return Promise.resolve(`<script type="module" ${attrString} src="${filepath}"></script>`);
         }
 
         // In production, compile and inline the JS
@@ -120,11 +128,19 @@ function compileNode(node: ASTNode): Promise<string> {
     }
 
     case 'LIQUID_TAG': {
-      return Promise.resolve(`{% ${node.value} %}`);
+      const openingHyphen = node.hasOpeningHyphen ? '-' : '';
+      const closingHyphen = node.hasClosingHyphen ? '-' : '';
+      // Remove all leading whitespace and ensure proper spacing
+      const value = node.value ? ` ${node.value.trim()} ` : '';
+      return Promise.resolve(`{%${openingHyphen}${value}${closingHyphen}%}`);
     }
 
     case 'LIQUID_VARIABLE': {
-      return Promise.resolve(`{{ ${node.value} }}`);
+      const openingHyphen = node.hasOpeningHyphen ? '-' : '';
+      const closingHyphen = node.hasClosingHyphen ? '-' : '';
+      // Similarly for variables
+      const value = node.value ? ` ${node.value.trim()} ` : '';
+      return Promise.resolve(`{{${openingHyphen}${value}${closingHyphen}}}`);
     }
 
     case 'HTML': {
@@ -177,4 +193,3 @@ export async function compile(ast: RootNode): Promise<string> {
 
   return compiledNodes.join('');
 }
-
