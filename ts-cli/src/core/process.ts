@@ -6,9 +6,11 @@ import { injectScripts } from '@core/inject.js';
 import { parse } from '@core/parser.js';
 import { tokenize } from '@core/tokenizer.js';
 import { LogError, LogSuccess } from '@utils/logger.js';
+import { pathToFileURL } from 'node:url';
 
 function sanitizeFilePath(filePath: string): string {
-  const parts = filePath.split('/');
+  const filepath = pathToFileURL(new URL(filePath).pathname);
+  const parts = filepath.href.split('/');
 
   if (parts.includes('templates') && parts.includes('customers')) {
     return `${parts[parts.length - 3]}/${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
@@ -52,7 +54,6 @@ export async function processFile(filePath: string): Promise<void> {
       uploadContent = compiledContent;
     }
 
-    console.log(uploadContent);
     // Upload the content
     await globalThis.config.shopifyClient.uploadFile(sanitizedPath, uploadContent);
 
