@@ -1,7 +1,5 @@
 import path from 'node:path';
 
-import glob from 'fast-glob';
-// import chokidar from 'chokidar';
 import open from 'open';
 import watcher from '@parcel/watcher';
 
@@ -49,6 +47,7 @@ const watch = new Command('watch')
         globalThis.config.inputPath,
         async (err, events) => {
           await Promise.all(
+            // eslint-disable-next-line array-callback-return
             events.map((event) => {
               switch (event.type) {
                 case 'update':
@@ -56,17 +55,21 @@ const watch = new Command('watch')
                     return;
                   }
                   processFile(event.path);
+
                   break;
                 case 'create':
                   if (path.extname(event.path) !== '.liquid') {
                     return;
                   }
                   processFile(event.path);
+
+                  break;
                 case 'delete':
                   if (path.extname(event.path) !== '.liquid') {
                     return;
                   }
                   processFile(event.path);
+                  break;
                 default:
                   break;
               }
