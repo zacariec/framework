@@ -102,7 +102,7 @@ export async function loadFrameworkConfig(configPath?: string): Promise<Framewor
             module: 'commonjs',
           },
         });
-        userConfig = await import(finalConfigPath);
+        userConfig = await import(pathToFileURL(finalConfigPath).href);
         break;
       default:
         throw new Error(`Unsupported config file type: ${finalConfigPath}`);
