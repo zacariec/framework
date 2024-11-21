@@ -8,6 +8,7 @@ import { parse } from '@core/parser.js';
 
 import glob from 'fast-glob';
 import { LogError } from '@utils/logger.js';
+import pLimit from 'p-limit';
 
 type FileMap = Map<string, string>;
 
@@ -50,9 +51,10 @@ export async function getFilesToUpload(inputPath: string): Promise<FileMap> {
 
 export async function syncFiles(): Promise<void> {
   const files = await getFilesToUpload(globalThis.config.inputPath);
+  const limit = pLimit(globalThis.config.frameworkConfig.framework.environments[globalThis.config.environment].rateLimit ?? 2);
 
   const filePromises = Array.from(files.entries()).map(async ([file, content]) => {
-    return new Promise(async (resolve, reject) => {
+    return limit(() => new Promise(async (resolve, reject) => {
       const tokens = tokenize(content);
       const ast = parse(tokens);
       const compiledContent = await compile(ast);
@@ -66,10 +68,11 @@ export async function syncFiles(): Promise<void> {
         reject(error);
       }
     
-    })
+    }))
   });
 
-  await Promise.all(filePromises);
+
+  await Promise.all([filePromises]);
 }
 
 export async function initialSetup(): Promise<void> {
