@@ -137,6 +137,7 @@ export interface FrameworkEnvironmentConfig extends ShopifyEnvironmentConfig {
   input?: string;
   output?: string;
   viteAssetDirectory?: string;
+  rateLimit?: number;
 }
 
 export interface FrameworkConfig {
