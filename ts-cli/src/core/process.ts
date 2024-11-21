@@ -9,7 +9,8 @@ import { LogError, LogSuccess } from '@utils/logger.js';
 import { pathToFileURL } from 'node:url';
 
 function sanitizeFilePath(filePath: string): string {
-  const filepath = pathToFileURL(new URL(filePath).pathname);
+  const requiresHttp = process.platform !== 'win32' ? 'http:/' : '';
+  const filepath = pathToFileURL(new URL(requiresHttp + filePath).pathname);
   const parts = filepath.href.split('/');
 
   if (parts.includes('templates') && parts.includes('customers')) {
