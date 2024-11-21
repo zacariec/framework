@@ -131,16 +131,16 @@ function compileNode(node: ASTNode): Promise<string> {
       const openingHyphen = node.hasOpeningHyphen ? '-' : '';
       const closingHyphen = node.hasClosingHyphen ? '-' : '';
       // Remove all leading whitespace and ensure proper spacing
-      const value = node.value ? ` ${node.value.trim()} ` : '';
-      return Promise.resolve(`{%${openingHyphen}${value}${closingHyphen}%}`);
+      const value = node.value ? node.value.trim() : '';
+      return Promise.resolve(`{%${openingHyphen} ${value} ${closingHyphen}%}`);
     }
 
     case 'LIQUID_VARIABLE': {
       const openingHyphen = node.hasOpeningHyphen ? '-' : '';
       const closingHyphen = node.hasClosingHyphen ? '-' : '';
       // Similarly for variables
-      const value = node.value ? ` ${node.value.trim()} ` : '';
-      return Promise.resolve(`{{${openingHyphen}${value}${closingHyphen}}}`);
+      const value = node.value ? node.value.trim() : '';
+      return Promise.resolve(`{{${openingHyphen} ${value} ${closingHyphen}}}`);
     }
 
     case 'HTML': {
