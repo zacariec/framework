@@ -1,0 +1,39 @@
+---
+name: Issue Template
+about: Standard template for project issues
+title: ''
+labels: ''
+assignees: ''
+
+---
+
+### Issue Type
+<!-- Select one by changing [ ] to [x] -->
+- [ ] Feature
+- [ ] Bug
+- [ ] Other
+
+### User Story
+**As a** [type of user]  
+**I want** [goal]  
+**So that** [benefit/value]
+
+### Description
+[Provide a detailed description of the feature/bug/task]
+
+### Acceptance Criteria
+<!-- List the conditions that must be met for this issue to be closed -->
+- [ ] Given [context/setup]
+      When [action is performed]
+      Then [expected result]
+- [ ] Given [context/setup]
+      When [action is performed]
+      Then [expected result]
+
+### Additional Information
+- **Priority:** [High/Medium/Low]
+- **Estimated Effort:** [Story Points/Time]
+- **Dependencies:** [List any dependent issues or blockers]
+
+### Technical Notes
+<!-- Any technical considerations, architecture decisions, or implementation details -->
