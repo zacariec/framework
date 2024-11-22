@@ -1,5 +1,5 @@
 import type { UserConfig as ViteUserConfig } from 'vite';
-import type { WebSocketServer } from 'ws';
+import type { WebSocketServer, WebSocket } from 'ws';
 import { ShopifyAPI } from '../shopify/api.js';
 
 export enum TokenType {
@@ -185,6 +185,7 @@ export interface GlobalConfig {
 
   // Server configuration
   websocketServer: WebSocketServer;
+  ws: WebSocket;
   port: number;
   vitePort: number;
   viteServerUrl: string;
