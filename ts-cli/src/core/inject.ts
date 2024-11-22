@@ -18,6 +18,7 @@ export async function injectScripts(content: string): Promise<string> {
 <script type="module" src="${viteServerUrl}/@vite/client"></script>
 <script type="module">
   window.FrameworkServer = ${JSON.stringify(globalThis.config.websocketServer.address())}
+
 class FrameworkOverlay extends HTMLElement {
   constructor() {
     super();
@@ -54,6 +55,10 @@ class FrameworkOverlay extends HTMLElement {
       console.log(this.ws.CLOSED, event);
     };
     this.ws.onmessage = (event) => {
+  if (event.data === 'reload') {
+    window.location.reload();
+  }
+
       console.log(event);
     };
   }

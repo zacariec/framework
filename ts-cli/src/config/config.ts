@@ -126,6 +126,11 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
     port: 8080, // TODO: Generate a port number
   });
 
+  // open connection to client.
+  websocketServer.on('connection', (ws) => {
+    globalThis.config.ws = ws;
+  });
+
   if (!envConfig) {
     throw new Error(`Environment "${environment}" not found in configuration`);
   }
