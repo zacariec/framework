@@ -158,16 +158,16 @@ Framework provides several loading strategies to optimize when components are lo
 Common use cases:
 
 ```liquid
-{# Recommended for below-the-fold content #}
+{% comment %} Recommended for below-the-fold content {% endcomment %}
 {% use ProductGrid | library: 'preact' | load: 'idle' | name: 'product-grid' %}
 
-{# Good for large product image galleries #}
+{% comment %} Good for large product image galleries {% endcomment %}
 {% use Gallery | library: 'lit' | load: 'visible' | name: 'product-gallery' %}
 
-{# Use for critical above-the-fold content #}
+{% comment %} Use for critical above-the-fold content {% endcomment %}
 {% use Hero | library: 'vue' | load: 'load' | name: 'hero-banner' %}
 
-{# Responsive components #}
+{% comment %} Responsive components {% endcomment %}
 {% use MobileFilters | library: 'solid' | load: 'media' | query: '(max-width: 640px)' | name: 'mobile-filters' %}
 ```
 
