@@ -43,7 +43,7 @@ npm install
 Create a `framework.config.ts` file in your project root:
 
 ```typescript
-import { defineConfig } from '@zacariec/framework';
+import { defineConfig } from './src/core/config';
 import preact from '@preact/preset-vite';
 import vue from '@vitejs/plugin-vue';
 import solid from 'vite-plugin-solid';
