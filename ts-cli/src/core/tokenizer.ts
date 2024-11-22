@@ -35,7 +35,10 @@ export function tokenize(content: string): Token[] {
       while (content[current] === ' ') current++;
 
       // Check for import statement
-      if (content.slice(current, current + 6) === 'import' || content.slice(current, current + 7) === 'import ') {
+      if (
+        content.slice(current, current + 6) === 'import' ||
+        content.slice(current, current + 7) === 'import '
+      ) {
         current += 6;
         let importStatement = '';
         const attributes: Record<string, any> = {
@@ -61,7 +64,10 @@ export function tokenize(content: string): Token[] {
             line,
             column,
           });
-        } else if (importStatement.trim().startsWith("'") || importStatement.trim().startsWith('"')) {
+        } else if (
+          importStatement.trim().startsWith("'") ||
+          importStatement.trim().startsWith('"')
+        ) {
           // Handle direct file import (e.g., import '../src/mycss.css')
           attributes.filepath = importStatement.trim().replace(/['"]/g, '');
           tokens.push({
@@ -94,7 +100,11 @@ export function tokenize(content: string): Token[] {
             current++; // Skip the pipe
             let attrString = '';
 
-            while (current < content.length && content[current] !== '%' && content[current] !== '|') {
+            while (
+              current < content.length &&
+              content[current] !== '%' &&
+              content[current] !== '|'
+            ) {
               attrString += content[current];
               current++;
             }
@@ -102,13 +112,17 @@ export function tokenize(content: string): Token[] {
             const colonIndex = attrString.indexOf(':');
 
             if (colonIndex !== -1) {
-              const key = attrString.slice(0, colonIndex).trim().replace(/^['"]|['"]/g, '');
-              const value = attrString.slice(colonIndex + 1).trim().replace(/^['"]|['"]/g, '');
+              const key = attrString
+                .slice(0, colonIndex)
+                .trim()
+                .replace(/^['"]|['"]/g, '');
+              const value = attrString
+                .slice(colonIndex + 1)
+                .trim()
+                .replace(/^['"]|['"]/g, '');
 
-              console.log(key, value);
               attributes[key] = value;
             }
-
           } else {
             useStatement += content[current];
             current++;

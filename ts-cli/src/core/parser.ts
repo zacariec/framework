@@ -70,7 +70,6 @@ export function parse(tokens: Token[]): RootNode {
       }
 
       case TokenType.USE: {
-        console.log(token);
         // get the matching import token.
         const matchingImportToken = tokens.find(
           (importToken) =>
