@@ -58,6 +58,8 @@ export async function processFile(filePath: string): Promise<void> {
     // Upload the content
     await globalThis.config.shopifyClient.uploadFile(sanitizedPath, uploadContent);
 
+    globalThis.config.ws.send('reload');
+
     LogSuccess(`Processed, compiled, and uploaded: ${sanitizedPath}`);
   } catch (error) {
     // Add more detailed error information in development
