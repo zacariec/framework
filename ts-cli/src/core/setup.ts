@@ -1,14 +1,15 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
+import glob from 'fast-glob';
+import pLimit from 'p-limit';
+
 import { compile } from '@core/compiler.js';
 import { injectScripts } from '@core/inject.js';
 import { tokenize } from '@core/tokenizer.js';
 import { parse } from '@core/parser.js';
 
-import glob from 'fast-glob';
 import { LogError } from '@utils/logger.js';
-import pLimit from 'p-limit';
 
 type FileMap = Map<string, string>;
 
