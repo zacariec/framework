@@ -7,6 +7,7 @@ import { parse } from '@core/parser.js';
 import { tokenize } from '@core/tokenizer.js';
 import { LogError, LogSuccess } from '@utils/logger.js';
 import { pathToFileURL } from 'node:url';
+import { FrameworkEvent, WebsocketClientEvents, WebsocketEventEmitter } from '@constants/events.js';
 
 function sanitizeFilePath(filePath: string): string {
   const requiresHttp = process.platform !== 'win32' ? 'http:/' : '';
@@ -26,16 +27,11 @@ function sanitizeFilePath(filePath: string): string {
  * @param {string} filePath - The path of the file to process
  */
 export async function processFile(filePath: string): Promise<void> {
-  const {
-    inputPath,
-    isDevelopment,
-    // shopify,
-    // vitePort
-  } = globalThis.config;
+  const { inputPath, isDevelopment } = globalThis.config;
+  const sanitizedPath = sanitizeFilePath(filePath);
 
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    const sanitizedPath = sanitizeFilePath(filePath);
     let compiledContent: string;
 
     // Compile all Liquid files
@@ -58,15 +54,33 @@ export async function processFile(filePath: string): Promise<void> {
     // Upload the content
     await globalThis.config.shopifyClient.uploadFile(sanitizedPath, uploadContent);
 
-    globalThis.config.ws.send('reload');
+    WebsocketEventEmitter.emit(WebsocketClientEvents.Change, {
+      type: WebsocketClientEvents.Change,
+      data: {
+        message: 'Updated',
+        file: sanitizedPath,
+      },
+    });
 
     LogSuccess(`Processed, compiled, and uploaded: ${sanitizedPath}`);
   } catch (error) {
     // Add more detailed error information in development
-    if (isDevelopment) {
-      return LogError('Full error:', error as Error);
+    if (!isDevelopment) {
+      LogError(`Error processing ${filePath}: ${error}`);
+      return;
     }
 
-    LogError(`Error processing ${filePath}: ${error}`);
+    // Send error to our frontend logger.
+    WebsocketEventEmitter.emit(WebsocketClientEvents.Error, {
+      type: WebsocketClientEvents.Error,
+      data: {
+        message: error as string,
+        file: sanitizedPath,
+      },
+    });
+
+    LogError('Full error:', error as Error);
+
+    return;
   }
 }
