@@ -11,6 +11,8 @@ import { CONFIG_FILE_NAMES } from '@constants/constants.js';
 import { LogError } from '@utils/logger.js';
 
 import type { CommandOptions, FrameworkConfig, GlobalConfig } from '../types/types.js';
+import { WebsocketClient } from '@core/websocket.js';
+import { WebsocketEventEmitter } from '@constants/events.js';
 
 /**
  * Checks if a file exists at the given path.
@@ -126,11 +128,6 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
     port: 8080, // TODO: Generate a port number
   });
 
-  // open connection to client.
-  websocketServer.on('connection', (ws) => {
-    globalThis.config.ws = ws;
-  });
-
   if (!envConfig) {
     throw new Error(`Environment "${environment}" not found in configuration`);
   }
@@ -200,7 +197,7 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
       shopifyUrl,
       accessToken: options.accessToken || envConfig.accessToken,
     }),
-
+    clients: [],
     // Build configuration
     timestamp: Date.now(),
     buildId: nanoid(),
@@ -211,4 +208,11 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
       processedAssets: new Set(),
     },
   } satisfies GlobalConfig;
+
+  // open connection to client.
+  // TODO: Handle multiple connection instances.
+  // BUG: Do I need multiple eventEmitters - surely not.
+  websocketServer.on('connection', (ws) => {
+    globalThis.config.clients.push(new WebsocketClient(ws, WebsocketEventEmitter));
+  });
 }
