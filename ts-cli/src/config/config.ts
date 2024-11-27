@@ -119,7 +119,7 @@ export async function loadFrameworkConfig(configPath?: string): Promise<Framewor
   }
 }
 
-export function setupGlobalConfig(options: CommandOptions, frameworkConfig: FrameworkConfig): void {
+export async function setupGlobalConfig(options: CommandOptions, frameworkConfig: FrameworkConfig): Promise<void> {
   const environment = options.environment || 'development';
   const envConfig = frameworkConfig.framework.environments[environment];
   const websocketServer = new WebSocketServer({
