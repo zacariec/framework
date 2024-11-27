@@ -29,7 +29,7 @@ export const WatchContext = createContext<WatchContextType>({
       themeId: 0,
       shopifyUrl: '',
       accessToken: '',
-    }
+    },
   },
   setState: (state: State) => {},
 });
@@ -61,8 +61,7 @@ export const Watch = ({ args, environments }: Props) => {
 };
 
 export async function WatchCommand(args: any): Promise<void> {
-  const frameworkConfig = await loadFrameworkConfig();
-  setupGlobalConfig(args, frameworkConfig);
-
-  render(<Watch {...args} environments={frameworkConfig.framework.environments} />);
+  render(
+    <Watch {...args} environments={globalThis.config.frameworkConfig.framework.environments} />,
+  );
 }
