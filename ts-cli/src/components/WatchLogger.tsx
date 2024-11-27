@@ -12,6 +12,8 @@ import { processFile } from '@core/process.js';
 import { WatchEventEmitter, WatchEventEmitterEvents } from '@constants/events.js';
 import * as emoji from 'node-emoji';
 
+import type { WatchCommandOptions } from '../types/types.js';
+
 const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
   Promise.all(
     events.map((event) => {
@@ -42,6 +44,9 @@ const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
     }),
   );
 
+type Props = {
+  args: WatchCommandOptions;
+}
 type LogType = 'info' | 'warning' | 'success' | 'error' | 'other';
 type LogState = {
   message: string;

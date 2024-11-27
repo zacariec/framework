@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useState } from 'react';
 import { Box, render, useApp, useInput } from 'ink';
 
-import type { FrameworkEnvironmentConfig } from '../../types/types.js';
+import type { FrameworkEnvironmentConfig, WatchCommandOptions } from '../../types/types.js';
 
 import { loadFrameworkConfig, setupGlobalConfig } from '@config/config.js';
 import { EnvironmentSelector } from '@components/EnvironmentSelector.js';
 import { WatchLogger } from '@components/WatchLogger.js';
 
 type Props = {
-  args: any;
+  args: WatchCommandOptions;
   environments: Record<string, FrameworkEnvironmentConfig>;
 };
 
@@ -53,7 +53,7 @@ export const Watch = ({ args, environments }: Props) => {
         (!args?.environment && state.environment.accessToken === '') ? (
           <EnvironmentSelector environments={environments} />
         ) : (
-          <WatchLogger {...args} />
+          <WatchLogger args={args} />
         )}
       </Box>
     </WatchContext.Provider>
@@ -62,6 +62,6 @@ export const Watch = ({ args, environments }: Props) => {
 
 export async function WatchCommand(args: any): Promise<void> {
   render(
-    <Watch {...args} environments={globalThis.config.frameworkConfig.framework.environments} />,
+    <Watch args={args} environments={globalThis.config.frameworkConfig.framework.environments} />,
   );
 }
