@@ -20,7 +20,7 @@
     "@types/http-proxy": "^1.17.15",
     "chalk": "^5.3.0",
     "chokidar": "^4.0.1",
-    "commander": "^8.3.0",
+    "commander": "^12.1.0",
     "fast-glob": "^3.3.2",
     "http-proxy": "^1.18.1",
     "ink": "^5.0.1",
