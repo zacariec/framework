@@ -1,9 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react';
-
+import React, { useEffect, useState } from 'react';
 import { Box, Newline, Text } from 'ink';
 import open from 'open';
 
-import { WatchContext } from '@commands/watch/watch.js';
 import { createServer } from 'vite';
 import path from 'path';
 import { initialSetup } from '@core/setup.js';
@@ -13,6 +11,7 @@ import { WatchEventEmitter, WatchEventEmitterEvents } from '@constants/events.js
 import * as emoji from 'node-emoji';
 
 import type { WatchCommandOptions } from '../types/types.js';
+import { useFrameworkStore } from '@constants/stores.js';
 
 const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
   Promise.all(
@@ -46,15 +45,16 @@ const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
 
 type Props = {
   args: WatchCommandOptions;
-}
+};
 type LogType = 'info' | 'warning' | 'success' | 'error' | 'other';
 type LogState = {
   message: string;
   type: LogType;
 };
 
-export const WatchLogger = ({ args }: { args: any }) => {
-  const { state } = useContext(WatchContext);
+export const WatchLogger = ({ args }: Props) => {
+  const { key, environment } = useFrameworkStore((state) => state);
+
   const [viteServerUrl, setViteServerUrl] = useState<string | undefined>(undefined);
   const [frameworkWebhookUrl, setFrameworkWebhookUrl] = useState<string | undefined>(
     'http://localhost:8080',
@@ -117,7 +117,7 @@ export const WatchLogger = ({ args }: { args: any }) => {
 
     createServer({
       ...globalThis.config.frameworkConfig.vite,
-      root: path.join(globalThis.config.inputPath, state.environment?.viteAssetDirectory ?? 'src'),
+      root: path.join(globalThis.config.inputPath, environment?.viteAssetDirectory ?? 'src'),
       publicDir: false,
       customLogger: {
         info(message, options) {
@@ -174,7 +174,7 @@ export const WatchLogger = ({ args }: { args: any }) => {
 
   return (
     <Box flexDirection="column">
-      <Text color="magentaBright">Selected environment is {state.key}</Text>
+      <Text color="magentaBright">Selected environment is {key}</Text>
       <Newline />
       <Box>
         <Text bold color="yellowBright">
