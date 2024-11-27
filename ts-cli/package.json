@@ -35,7 +35,8 @@
     "ts-node": "^10.9.2",
     "vite": "^5.4.8",
     "vite-plugin-framework": "file:../plugin",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zustand": "^5.0.1"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.25.9",
