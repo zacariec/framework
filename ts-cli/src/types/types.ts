@@ -119,7 +119,6 @@ export interface CommandOptions {
   storeUrl?: string;
   accessToken?: string;
   ignore?: string;
-  port?: number;
 }
 
 export type BuildCommandOptions = CommandOptions;
