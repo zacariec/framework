@@ -27,7 +27,7 @@ program.hook('preAction', async (_thisCommand, actionCommand): Promise<void> => 
   // we should unwrap the config file here unless it's like a setup command etc.
   try {
     const config = await loadFrameworkConfig();
-    setupGlobalConfig(actionCommand.opts(), config);
+    setupGlobalConfig(actionCommand, config);
   } catch (error) {
     LogError(`${error}`);
     process.exit(1);
