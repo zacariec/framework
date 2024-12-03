@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+
 import {
   EnvironmentOption,
   ConfigOption,
@@ -10,8 +11,6 @@ import {
   IgnoreOption,
 } from '@constants/options.js';
 import { BuildCommand } from './build.js';
-
-import type { BuildCommandOptions } from '../../types/types.js';
 
 const options = [
   EnvironmentOption,
@@ -35,7 +34,7 @@ If running without flags, launches an interactive interface for selecting build 
 For CI/CD environments, you can specify options via command line flags.
   `,
   )
-  .action(BuildCommand<BuildCommandOptions>);
+  .action(BuildCommand);
 
 options.forEach((option) => build.addOption(option));
 
