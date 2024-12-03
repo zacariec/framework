@@ -1,10 +1,11 @@
 import { Command } from 'commander';
 
-import buildCommand from '@commands/build.js';
+import buildCommand from '@commands/build/commander.js';
 import deployCommand from '@commands/deploy.js';
 import watchCommand from '@commands/watch/commander.js';
 import { LogError, LogInfo } from '@utils/logger.js';
 import { version } from '../../package.json';
+import { loadFrameworkConfig, setupGlobalConfig } from '@config/config.js';
 
 const program = new Command();
 
@@ -22,14 +23,16 @@ existing Shopify Liquid Storefronts.`,
   .addCommand(watchCommand)
   .addCommand(deployCommand);
 
-program
-  .option('c, --config <path>', 'Path to the Framework configuration file')
-  .hook('preAction', async (thisCommand) => {
-    const options = thisCommand.opts();
-    if (options.config) {
-      LogInfo(`Loading config from ${options.config}`);
-    }
-  });
+program.hook('preAction', async (_thisCommand, actionCommand): Promise<void> => {
+  // we should unwrap the config file here unless it's like a setup command etc.
+  try {
+    const config = await loadFrameworkConfig();
+    setupGlobalConfig(actionCommand, config);
+  } catch (error) {
+    LogError(`${error}`);
+    process.exit(1);
+  }
+});
 
 const run = async (argv: string[] = process.argv): Promise<void> => {
   try {
@@ -41,4 +44,3 @@ const run = async (argv: string[] = process.argv): Promise<void> => {
 };
 
 export { run };
-

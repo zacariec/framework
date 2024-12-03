@@ -13,3 +13,16 @@ export enum WatchEventEmitterEvents {
 }
 
 export const WatchEventEmitter = new EventEmitter();
+
+export enum BuildEventEmitterEvents {
+  FrameworkSuccess = 'frameworkSuccess',
+  FrameworkInfo = 'frameworkInfo',
+  FrameworkWarning = 'frameworkWarning',
+  FrameworkError = 'frameworkError',
+  ViteInfo = 'viteInfo',
+  ViteSuccess = 'viteSuccess',
+  ViteError = 'viteError',
+  ViteWarning = 'viteWarning',
+}
+
+export const BuildEventEmitter = new EventEmitter().setMaxListeners(1);

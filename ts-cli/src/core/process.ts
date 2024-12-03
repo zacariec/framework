@@ -1,14 +1,12 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { compile } from '@core/compiler.js';
+import { compiler } from '@core/compiler.js'
 import { injectScripts } from '@core/inject.js';
-import { parse } from '@core/parser.js';
-import { tokenize } from '@core/tokenizer.js';
 import { LogError, LogSuccess } from '@utils/logger.js';
 import { pathToFileURL } from 'node:url';
 
-function sanitizeFilePath(filePath: string): string {
+export function sanitizeFilePath(filePath: string): string {
   const requiresHttp = process.platform !== 'win32' ? 'http:/' : '';
   const filepath = pathToFileURL(new URL(requiresHttp + filePath).pathname);
   const parts = filepath.href.split('/');
@@ -23,9 +21,9 @@ function sanitizeFilePath(filePath: string): string {
 /**
  * Processes a single file, compiling if necessary and uploading to Shopify.
  *
- * @param {string} filePath - The path of the file to process
+ * @param {string} filepath - The path of the file to process
  */
-export async function processFile(filePath: string): Promise<void> {
+export async function processFile(filepath: string): Promise<void> {
   const {
     inputPath,
     isDevelopment,
@@ -34,15 +32,16 @@ export async function processFile(filePath: string): Promise<void> {
   } = globalThis.config;
 
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const sanitizedPath = sanitizeFilePath(filePath);
+    const content = await fs.readFile(filepath, 'utf-8');
+    const sanitizedPath = sanitizeFilePath(filepath);
     let compiledContent: string;
 
     // Compile all Liquid files
-    if (path.extname(filePath) === '.liquid') {
-      const tokens = tokenize(content);
-      const ast = parse(tokens);
-      compiledContent = await compile(ast);
+    if (path.extname(filepath) === '.liquid') {
+      compiledContent = await compiler
+        .tokenize(content)
+        .parse()
+        .compile();
     } else {
       compiledContent = content;
     }
@@ -67,6 +66,6 @@ export async function processFile(filePath: string): Promise<void> {
       return LogError('Full error:', error as Error);
     }
 
-    LogError(`Error processing ${filePath}: ${error}`);
+    LogError(`Error processing ${filepath}: ${error}`);
   }
 }

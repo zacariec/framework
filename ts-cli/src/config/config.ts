@@ -11,6 +11,7 @@ import { CONFIG_FILE_NAMES } from '@constants/constants.js';
 import { LogError } from '@utils/logger.js';
 
 import type { CommandOptions, FrameworkConfig, GlobalConfig } from '../types/types.js';
+import { Command } from 'commander';
 
 /**
  * Checks if a file exists at the given path.
@@ -119,9 +120,13 @@ export async function loadFrameworkConfig(configPath?: string): Promise<Framewor
   }
 }
 
-export function setupGlobalConfig(options: CommandOptions, frameworkConfig: FrameworkConfig): void {
+export async function setupGlobalConfig(
+  command: Command,
+  frameworkConfig: FrameworkConfig,
+): Promise<void> {
+  const options = command.opts();
   const environment = options.environment || 'development';
-  const envConfig = frameworkConfig.framework.environments[environment];
+  const envConfig = frameworkConfig.environments[environment];
   const websocketServer = new WebSocketServer({
     port: 8080, // TODO: Generate a port number
   });
@@ -151,18 +156,16 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
     (options.storeUrl || envConfig.shopifyUrl).replace('http://', '').replace('https://', '');
   const storeName = shopifyUrl.replace(/^https?:\/\//, '').split('.')[0];
 
-  const vitePort = frameworkConfig.vite?.server?.port || 5173;
-  const viteAssetDirectory = envConfig.viteAssetDirectory || 'src';
+  const vitePort = frameworkConfig.vitePort ?? 5173;
 
   globalThis.config = {
+    command,
     // Framework configuration
     frameworkConfig,
 
     // Environment
     environment,
-    isDevelopment: environment === 'development',
-    isProduction: environment === 'production',
-    isWatching: true,
+    isDevelopment: command.name() === 'watch' ? true : false,
 
     // Paths
     rootPath,
@@ -180,25 +183,25 @@ export function setupGlobalConfig(options: CommandOptions, frameworkConfig: Fram
 
     // Server configuration
     websocketServer,
-    port: frameworkConfig.framework.port || 3000,
+    port: frameworkConfig.port ?? 3000,
     vitePort,
     viteServerUrl: `http://localhost:${vitePort}`,
 
     // Shopify configuration
     shopify: {
-      themeId: Number(options.themeId || envConfig.themeId),
+      themeId: Number(options.themeId ?? envConfig.themeId),
       shopifyUrl,
-      accessToken: options.accessToken || envConfig.accessToken,
-      ignores: envConfig.ignores || [],
+      accessToken: options.accessToken ?? envConfig.accessToken,
+      ignores: envConfig.ignores ?? [],
       apiVersion: '2024-01',
       storeName,
     },
 
     // Initialize Shopify client
     shopifyClient: createShopifyAPI({
-      themeId: Number(options.themeId || envConfig.themeId),
+      themeId: Number(options.themeId ?? envConfig.themeId),
       shopifyUrl,
-      accessToken: options.accessToken || envConfig.accessToken,
+      accessToken: options.accessToken ?? envConfig.accessToken,
     }),
 
     // Build configuration

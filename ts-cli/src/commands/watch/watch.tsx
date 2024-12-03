@@ -1,43 +1,20 @@
-import React, { createContext, useContext, useState } from 'react';
+import React from 'react';
 import { Box, render, useApp, useInput } from 'ink';
 
-import type { FrameworkEnvironmentConfig } from '../../types/types.js';
+import type { WatchCommandOptions } from '../../types/types.js';
 
-import { loadFrameworkConfig, setupGlobalConfig } from '@config/config.js';
 import { EnvironmentSelector } from '@components/EnvironmentSelector.js';
 import { WatchLogger } from '@components/WatchLogger.js';
+import { useFrameworkStore } from '@constants/stores.js';
 
 type Props = {
-  args: any;
-  environments: Record<string, FrameworkEnvironmentConfig>;
+  args: WatchCommandOptions;
 };
 
-type State = {
-  environment: FrameworkEnvironmentConfig;
-  key: string;
-};
-
-type WatchContextType = {
-  state: State;
-  setState: (arg0: State) => void;
-};
-
-export const WatchContext = createContext<WatchContextType>({
-  state: {
-    key: '',
-    environment: {
-      themeId: 0,
-      shopifyUrl: '',
-      accessToken: '',
-    }
-  },
-  setState: (state: State) => {},
-});
-
-export const Watch = ({ args, environments }: Props) => {
-  const context = useContext(WatchContext);
-  const [state, setState] = useState(context.state);
+export const Watch = ({ args }: Props) => {
   const app = useApp();
+  const {environment} = useFrameworkStore((state) => state);
+
 
   useInput((input, key) => {
     if (key.escape || input === 'q') {
@@ -47,22 +24,19 @@ export const Watch = ({ args, environments }: Props) => {
   });
 
   return (
-    <WatchContext.Provider value={{ state, setState }}>
       <Box flexDirection="column" borderStyle="bold" padding={2} margin={2} borderColor="green">
-        {state.environment.accessToken === '' ||
-        (!args?.environment && state.environment.accessToken === '') ? (
-          <EnvironmentSelector environments={environments} />
+        {environment.accessToken === '' ||
+        (!args?.environment && environment.accessToken === '') ? (
+          <EnvironmentSelector environments={globalThis.config.frameworkConfig.environments} />
         ) : (
-          <WatchLogger {...args} />
+          <WatchLogger args={args} />
         )}
       </Box>
-    </WatchContext.Provider>
   );
 };
 
 export async function WatchCommand(args: any): Promise<void> {
-  const frameworkConfig = await loadFrameworkConfig();
-  setupGlobalConfig(args, frameworkConfig);
-
-  render(<Watch {...args} environments={frameworkConfig.framework.environments} />);
+  render(
+    <Watch args={args} />,
+  );
 }

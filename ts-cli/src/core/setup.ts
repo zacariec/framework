@@ -4,12 +4,10 @@ import fs from 'node:fs/promises';
 import glob from 'fast-glob';
 import pLimit from 'p-limit';
 
-import { compile } from '@core/compiler.js';
 import { injectScripts } from '@core/inject.js';
-import { tokenize } from '@core/tokenizer.js';
-import { parse } from '@core/parser.js';
 
 import { LogError } from '@utils/logger.js';
+import { compiler } from './compiler.js';
 
 type FileMap = Map<string, string>;
 
@@ -52,14 +50,14 @@ export async function getFilesToUpload(inputPath: string): Promise<FileMap> {
 
 export async function syncFiles(): Promise<void> {
   const files = await getFilesToUpload(globalThis.config.inputPath);
-  const limit = pLimit(globalThis.config.frameworkConfig.framework.environments[globalThis.config.environment].rateLimit ?? 2);
+  const limit = pLimit(globalThis.config.frameworkConfig.environments[globalThis.config.environment].rateLimit ?? 2);
 
   const filePromises = Array.from(files.entries()).map(async ([file, content]) => {
     return limit(() => new Promise(async (resolve, reject) => {
-      const tokens = tokenize(content);
-      const ast = parse(tokens);
-      const compiledContent = await compile(ast);
-
+      const compiledContent = await compiler
+        .tokenize(content)
+        .parse()
+        .compile();
 
       try {
         await globalThis.config.shopifyClient.uploadFile(file, compiledContent);
@@ -68,8 +66,7 @@ export async function syncFiles(): Promise<void> {
         LogError(error as string);
         reject(error);
       }
-    
-    }))
+    }));
   });
 
 
@@ -86,9 +83,11 @@ export async function initialSetup(): Promise<void> {
         const filePath = path.join(layoutDirectory, file);
         const content = await fs.readFile(filePath, 'utf8');
 
-        const tokens = tokenize(content);
-        const ast = parse(tokens);
-        const compiledContent = await compile(ast);
+        const compiledContent = await compiler
+          .tokenize(content)
+          .parse()
+          .compile();
+
         const injectedContent = await injectScripts(compiledContent);
 
         await globalThis.config.shopifyClient.uploadFile(`layout/${file}`, injectedContent);

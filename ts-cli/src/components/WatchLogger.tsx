@@ -1,9 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react';
-
+import React, { useEffect, useState } from 'react';
 import { Box, Newline, Text } from 'ink';
 import open from 'open';
 
-import { WatchContext } from '@commands/watch/watch.js';
 import { createServer } from 'vite';
 import path from 'path';
 import { initialSetup } from '@core/setup.js';
@@ -11,6 +9,11 @@ import watcher from '@parcel/watcher';
 import { processFile } from '@core/process.js';
 import { WatchEventEmitter, WatchEventEmitterEvents } from '@constants/events.js';
 import * as emoji from 'node-emoji';
+
+import type { LogState, LogType, WatchCommandOptions } from '../types/types.js';
+import { useFrameworkStore } from '@constants/stores.js';
+import { generateViteDevelopmentBuildConfig } from '@constants/vite.js';
+import { handleLogType } from '@utils/utils.js';
 
 const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
   Promise.all(
@@ -42,14 +45,13 @@ const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
     }),
   );
 
-type LogType = 'info' | 'warning' | 'success' | 'error' | 'other';
-type LogState = {
-  message: string;
-  type: LogType;
+type Props = {
+  args: WatchCommandOptions;
 };
 
-export const WatchLogger = ({ args }: { args: any }) => {
-  const { state } = useContext(WatchContext);
+export const WatchLogger = ({ args }: Props) => {
+  const { key, environment } = useFrameworkStore((state) => state);
+
   const [viteServerUrl, setViteServerUrl] = useState<string | undefined>(undefined);
   const [frameworkWebhookUrl, setFrameworkWebhookUrl] = useState<string | undefined>(
     'http://localhost:8080',
@@ -64,24 +66,6 @@ export const WatchLogger = ({ args }: { args: any }) => {
     type: 'other',
   });
 
-  const handleLogType = (
-    type: LogType,
-  ): 'yellowBright' | 'blueBright' | 'greenBright' | 'redBright' | 'grey' => {
-    switch (type) {
-      case 'other':
-        return 'grey';
-      case 'warning':
-        return 'yellowBright';
-      case 'info':
-        return 'blueBright';
-      case 'success':
-        return 'greenBright';
-      case 'error':
-        return 'redBright';
-      default:
-        return 'blueBright';
-    }
-  };
 
   useEffect(() => {
     WatchEventEmitter.on(WatchEventEmitterEvents.WatchInfo, (message) =>
@@ -110,34 +94,12 @@ export const WatchLogger = ({ args }: { args: any }) => {
       setViteLog({ message, type: 'warning' }),
     );
 
-    createServer({
-      ...globalThis.config.frameworkConfig.vite,
-      root: path.join(globalThis.config.inputPath, state.environment?.viteAssetDirectory ?? 'src'),
-      publicDir: false,
-      customLogger: {
-        info(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteInfo, message);
-        },
-        warn(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteWarning, message);
-        },
-        warnOnce(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteWarning, message);
-        },
-        error(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteError, message);
-        },
-        clearScreen() {},
-        hasErrorLogged(error) {
-          return false;
-        },
-        hasWarned: false,
-      },
-      server: {
-        ...globalThis.config.frameworkConfig.vite?.server,
-        port: globalThis.config.vitePort,
-      },
-    })
+
+    createServer(
+      generateViteDevelopmentBuildConfig(
+        path.join(globalThis.config.inputPath, environment?.viteAssetDirectory ?? 'src'),
+      ),
+    )
       .then((server) => server.listen())
       .then((server) => {
         setViteServerUrl(server.resolvedUrls?.local[0]);
@@ -169,7 +131,7 @@ export const WatchLogger = ({ args }: { args: any }) => {
 
   return (
     <Box flexDirection="column">
-      <Text color="magentaBright">Selected environment is {state.key}</Text>
+      <Text color="magentaBright">Selected environment is {key}</Text>
       <Newline />
       <Box>
         <Text bold color="yellowBright">

@@ -1,4 +1,5 @@
-import type { UserConfig as ViteUserConfig } from 'vite';
+import { Command } from 'commander';
+import type { PluginOption, UserConfig as ViteUserConfig } from 'vite';
 import type { WebSocketServer, WebSocket } from 'ws';
 import { ShopifyAPI } from '../shopify/api.js';
 
@@ -24,16 +25,28 @@ export interface Token {
   column?: number;
   hasOpeningHyphen?: boolean;
   hasClosingHyphen?: boolean;
+  filepath?: string;
 }
+
+export type NodeType =
+  | 'IMPORT_NAMED'
+  | 'IMPORT'
+  | 'PROPS'
+  | 'USE'
+  | 'TEXT'
+  | 'LIQUID_TAG'
+  | 'LIQUID_VARIABLE'
+  | 'HTML'
+  | 'ROOT';
 
 export interface BaseASTNode {
-  type: string;
+  type: NodeType;
   line?: number;
   column?: number;
+  value?: string;
 }
 
-export interface ImportNode extends BaseASTNode {
-  type: 'IMPORT';
+export interface ImportNamedNode extends BaseASTNode {
   name: string;
   path: string;
   isNamed: boolean;
@@ -44,45 +57,46 @@ export interface ImportNode extends BaseASTNode {
   };
 }
 
+export interface ImportNode extends ImportNamedNode {}
+
 export interface PropsNode extends BaseASTNode {
-  type: 'PROPS';
   name: string;
   content: string;
 }
 
 export interface UseNode extends BaseASTNode {
-  type: 'USE';
   component: string;
   props?: string;
   load?: 'client' | 'server';
   library?: string;
   name?: string;
-  attributes?: {
-    filepath?: string;
+  attributes: {
+    filepath: string;
   };
 }
 
 export interface TextNode extends BaseASTNode {
-  type: 'TEXT';
   value: string;
 }
 
 export interface LiquidNode extends BaseASTNode {
-  type: 'LIQUID_TAG' | 'LIQUID_VARIABLE';
-  value: string;
   hasOpeningHyphen?: boolean;
   hasClosingHyphen?: boolean;
 }
 
-export interface HTMLNode extends BaseASTNode {
-  type: 'HTML';
-  value: string;
-}
+export interface HTMLNode extends BaseASTNode {}
 
-export type ASTNode = ImportNode | PropsNode | UseNode | TextNode | LiquidNode | HTMLNode;
+export type ASTNode =
+  | ImportNamedNode
+  | ImportNode
+  | PropsNode
+  | UseNode
+  | TextNode
+  | LiquidNode
+  | HTMLNode;
 
 export interface RootNode {
-  type: 'ROOT';
+  type: NodeType;
   children: ASTNode[];
 }
 
@@ -119,7 +133,6 @@ export interface CommandOptions {
   storeUrl?: string;
   accessToken?: string;
   ignore?: string;
-  port?: number;
 }
 
 export type BuildCommandOptions = CommandOptions;
@@ -138,14 +151,14 @@ export interface FrameworkEnvironmentConfig extends ShopifyEnvironmentConfig {
   output?: string;
   viteAssetDirectory?: string;
   rateLimit?: number;
+  plugins?: PluginOption[];
+  adapters?: unknown[]; // implement false SSR for frameworks.
 }
 
 export interface FrameworkConfig {
-  vite?: ViteUserConfig;
-  framework: {
-    port?: number;
-    environments: Record<string, FrameworkEnvironmentConfig>;
-  };
+  port?: number;
+  vitePort?: number;
+  environments: Record<string, FrameworkEnvironmentConfig>;
 }
 
 export interface ShopifyConfig {
@@ -160,14 +173,13 @@ export interface ThemeInfo {
 }
 
 export interface GlobalConfig {
+  command: Command;
   // Framework configuration (from framework.config.*)
   frameworkConfig: FrameworkConfig;
 
   // Environment
   environment: string;
   isDevelopment: boolean;
-  isProduction: boolean;
-  isWatching: boolean;
 
   // Paths
   rootPath: string;
@@ -210,6 +222,12 @@ export interface GlobalConfig {
     processedAssets: Set<string>;
   };
 }
+
+export type LogType = 'info' | 'warning' | 'success' | 'error' | 'other';
+export type LogState = {
+  message: string;
+  type: LogType;
+};
 
 declare global {
   // eslint-disable-next-line vars-on-top, no-var

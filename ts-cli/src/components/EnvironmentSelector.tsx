@@ -1,11 +1,11 @@
-import React, { useContext } from 'react';
-import { Box, Newline, Text, useApp } from 'ink';
+import React from 'react';
+import { Box, Newline, Text } from 'ink';
 import SelectInput from 'ink-select-input';
 import * as emoji from 'node-emoji';
 
 import type { Item } from 'node_modules/ink-select-input/build/SelectInput.js';
 import type { FrameworkEnvironmentConfig } from '../types/types.js';
-import { WatchContext } from '@commands/watch/watch.js';
+import { useFrameworkStore } from '@constants/stores.js';
 
 type Props = {
   environments: Record<string, FrameworkEnvironmentConfig>;
@@ -20,10 +20,10 @@ const Indicator = ({ isSelected }: { isSelected?: boolean }) => {
 };
 
 export const EnvironmentSelector = ({ environments }: Props) => {
-  const { state, setState } = useContext(WatchContext);
+  const setEnvironment = useFrameworkStore(({ setEnvironment }) => setEnvironment);
 
   const handleSelect = (environment: Item<FrameworkEnvironmentConfig>) => {
-    setState({
+    setEnvironment({
       key: environment.key as string,
       environment: environment.value,
     });
@@ -38,9 +38,11 @@ export const EnvironmentSelector = ({ environments }: Props) => {
     };
   });
 
+  const action = globalThis.config.command.name() === 'build' ? 'Build' : 'Watch';
+
   return (
     <Box flexDirection="column">
-      <Text>Select Environment to Watch:</Text>
+      <Text color="yellowBright">Select Environment to {action}:</Text>
       <Newline />
       <SelectInput items={items} onSelect={handleSelect} indicatorComponent={Indicator} />
       <Newline />
