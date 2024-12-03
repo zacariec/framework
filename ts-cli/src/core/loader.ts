@@ -4,16 +4,16 @@ import * as path from 'path';
 /**
  * Asynchronously loads the content of a file.
  * 
- * @param {string} filePath - The path to the file to be loaded.
+ * @param {string} filepath - The path to the file to be loaded.
  * @returns {Promise<string>} A promise that resolves with the content of the file as a string.
  * @throws {Error} If the file cannot be read, with details about the failure.
  */
-export async function loadFile(filePath: string): Promise<string> {
+export async function loadFile(filepath: string): Promise<string> {
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
+    const content = await fs.readFile(filepath, 'utf-8');
     return content;
   } catch (error) {
-    throw new Error(`Failed to load file ${filePath}: ${error}`);
+    throw new Error(`Failed to load file ${filepath}: ${error}`);
   }
 }
 

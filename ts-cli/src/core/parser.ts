@@ -1,168 +1,205 @@
 /* eslint-disable prefer-destructuring */
 import { LogError } from '@utils/logger.js';
-import { Token, TokenType, RootNode } from '../types/types.js';
+import { Token, TokenType, RootNode, ASTNode, ImportNode, ImportNamedNode, PropsNode, UseNode, LiquidTagNode, LiquidVariableNode, HtmlNode, TextNode } from '../types/types.js';
 
-export function parse(tokens: Token[]): RootNode {
-  const ast: RootNode = {
-    type: 'ROOT',
-    children: [],
-  };
+export class ASTRootNode implements RootNode {
+  type: 'ROOT';
+  children: ASTNode[];
 
-  let current = 0;
+  constructor(children: ASTNode[]) {
+    this.type = 'ROOT';
+    this.children = children;
+  }
+}
 
-  while (current < tokens.length) {
-    const token = tokens[current];
+export class Parser {
+  private ast: RootNode;
+  private current: number;
 
-    switch (token.type) {
-      case TokenType.IMPORT:
-      case TokenType.IMPORT_NAMED: {
-        const isNamed = token.type === TokenType.IMPORT_NAMED;
-        let name;
-        let path;
-        let names;
-        if (isNamed) {
-          // Handle named imports like: {MyElement, MyOtherElement} from '../MyElement.ts'
-          const matches = token.value.match(/\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/);
-          if (matches) {
-            names = matches[1].split(',').map((n) => n.trim());
-            path = matches[2];
-          }
-        } else {
-          // Handle default imports like: MyTestComponent from '../MyTestComponent.ts'
-          const matches = token.value.match(/([^\s]+)\s+from\s+['"]([^'"]+)['"]/);
-          if (matches) {
-            name = matches[1];
-            path = matches[2];
-          }
-        }
-        ast.children.push({
-          type: 'IMPORT',
-          name: name || '',
-          path: path || '',
-          isNamed,
-          names,
-          attributes: token.attributes,
-          line: token.line,
-          column: token.column,
-        });
-        break;
-      }
-
-      case TokenType.PROPS: {
-        const name = token.value;
-        current++;
-        // Collect all content until PROPS_END
-        let content = '';
-        while (current < tokens.length && tokens[current].type !== TokenType.PROPS_END) {
-          if (tokens[current].type === TokenType.PROPS_CONTENT) {
-            content += tokens[current].value;
-          }
-          current++;
-        }
-        ast.children.push({
-          type: 'PROPS',
-          name,
-          content: content.trim(),
-          line: token.line,
-          column: token.column,
-        });
-        break;
-      }
-
-      case TokenType.USE: {
-        // get the matching import token.
-        const matchingImportToken = tokens.find(
-          (importToken) =>
-            (importToken.type === TokenType.IMPORT ||
-              importToken.type === TokenType.IMPORT_NAMED) &&
-            importToken.attributes?.imports?.includes(token.value) === true &&
-            importToken,
-        );
-        // TODO: Handle error for not being able to find matching import statement
-        if (!matchingImportToken) {
-          LogError(
-            `Failed to find matching import statement for ${token.value} on line: ${token.line}`,
-          );
-        }
-        // Parse component name and attributes
-        const componentName = token.value.trim().replace(/'/gm, '');
-        const attributes = token.attributes || {};
-        ast.children.push({
-          type: 'USE',
-          component: componentName,
-          props: attributes.props,
-          load: attributes.load?.replace(/'/gm, '') as 'client' | 'server',
-          library: attributes.library?.replace(/'/gm, ''),
-          name: attributes.name?.replace(/'/gm, ''),
-          line: token.line,
-          column: token.column,
-          attributes: {
-            filepath: matchingImportToken?.attributes?.filepath,
-          },
-        });
-        break;
-      }
-
-      case TokenType.LIQUID_TAG: {
-        // Skip certain Liquid tags that we don't need to transform
-        if (
-          !token.value.startsWith('import') &&
-          !token.value.startsWith('props') &&
-          !token.value.startsWith('use')
-        ) {
-          // Remove any spaces between the hyphen and the content
-          const value = token.value.trim();
-          ast.children.push({
-            type: 'LIQUID_TAG',
-            value,
-            line: token.line,
-            column: token.column,
-            hasOpeningHyphen: token.hasOpeningHyphen || false,
-            hasClosingHyphen: token.hasClosingHyphen || false,
-          });
-        }
-        break;
-      }
-
-      case TokenType.LIQUID_VARIABLE: {
-        // Remove any spaces between the hyphen and the content
-        const value = token.value.trim();
-        ast.children.push({
-          type: 'LIQUID_VARIABLE',
-          value,
-          line: token.line,
-          column: token.column,
-          hasOpeningHyphen: token.hasOpeningHyphen || false,
-          hasClosingHyphen: token.hasClosingHyphen || false,
-        });
-        break;
-      }
-
-      case TokenType.HTML: {
-        ast.children.push({
-          type: 'HTML',
-          value: token.value,
-          line: token.line,
-          column: token.column,
-        });
-        break;
-      }
-
-      case TokenType.TEXT: {
-        ast.children.push({
-          type: 'TEXT',
-          value: token.value,
-          line: token.line,
-          column: token.column,
-        });
-        break;
-      }
-      default:
-        break;
-    }
-
-    current++;
+  constructor() {
+    this.ast = new ASTRootNode([]);
+    this.current = 0;
   }
 
-  return ast;
+  public parse(tokens: Token[]): RootNode {
+    this.current = 0;
+    this.ast = new ASTRootNode([]);
+
+    while (this.current < tokens.length) {
+      const token = tokens[this.current];
+
+      switch (token.type) {
+        case TokenType.IMPORT:
+          this.handleImportToken(token);
+          break;
+        case TokenType.IMPORT_NAMED:
+          this.handleNamedImportToken(token);
+          break;
+        case TokenType.PROPS:
+          this.handlePropsToken(token, tokens);
+          break;
+        case TokenType.USE:
+          this.handleUseToken(token, tokens);
+          break;
+        case TokenType.LIQUID_TAG:
+          this.handleLiquidTagToken(token);
+          break;
+        case TokenType.LIQUID_VARIABLE:
+          this.handleLiquidVariableToken(token);
+          break;
+        case TokenType.HTML:
+          this.handleHtmlToken(token);
+          break;
+        case TokenType.TEXT:
+          this.handleTextToken(token);
+          break;
+        default:
+          break;
+      }
+
+      this.current++;
+    }
+
+    return this.ast;
+  }
+
+  private handleImportToken(token: Token) {
+    const matches = token.value.match(/['"]([^'"]+)['"]/);
+    if (matches) {
+      const path = matches[1];
+      this.ast.children.push({
+        type: 'IMPORT',
+        path,
+        isNamed: false,
+        attributes: token.attributes,
+        line: token.line,
+        column: token.column,
+      });
+    }
+  }
+
+  private handleNamedImportToken(token: Token) {
+    let name;
+    let path;
+    let names;
+    const defaultImportMatch = token.value.match(/(\w+)\s+from\s+['"]([^'"]+)['"]/);
+    if (defaultImportMatch) {
+      name = defaultImportMatch[1];
+      path = defaultImportMatch[2];
+    } else {
+      const namedImportMatch = token.value.match(/\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/);
+      if (namedImportMatch) {
+        names = namedImportMatch[1].split(',').map((n) => n.trim());
+        path = namedImportMatch[2];
+      }
+    }
+    this.ast.children.push({
+      type: 'IMPORT_NAMED',
+      name: name || '',
+      path: path || '',
+      isNamed: true,
+      names,
+      attributes: token.attributes,
+      line: token.line,
+      column: token.column,
+    });
+  }
+
+  private handlePropsToken(token: Token, tokens: Token[]) {
+    const name = token.value;
+    this.current++;
+    let content = '';
+    while (this.current < tokens.length && tokens[this.current].type !== TokenType.PROPS_END) {
+      if (tokens[this.current].type === TokenType.PROPS_CONTENT) {
+        content += tokens[this.current].value;
+      }
+      this.current++;
+    }
+    this.ast.children.push({
+      type: 'PROPS',
+      name,
+      content: content.trim(),
+      line: token.line,
+      column: token.column,
+    });
+  }
+
+  private handleUseToken(token: Token, tokens: Token[]) {
+    const matchingImportToken = tokens.find(
+      (importToken) =>
+        (importToken.type === TokenType.IMPORT ||
+          importToken.type === TokenType.IMPORT_NAMED) &&
+        importToken.attributes?.imports?.includes(token.value) === true &&
+        importToken,
+    );
+    if (!matchingImportToken) {
+      LogError(
+        `Failed to find matching import statement for ${token.value} on line: ${token.line}`,
+      );
+    }
+    const componentName = token.value.trim().replace(/'/gm, '');
+    const attributes = token.attributes || {};
+    this.ast.children.push({
+      type: 'USE',
+      component: componentName,
+      props: attributes.props,
+      load: attributes.load?.replace(/'/gm, '') as 'client' | 'server',
+      library: attributes.library?.replace(/'/gm, ''),
+      name: attributes.name?.replace(/'/gm, ''),
+      line: token.line,
+      column: token.column,
+      attributes: {
+        filepath: matchingImportToken?.attributes?.filepath,
+      },
+    });
+  }
+
+  private handleLiquidTagToken(token: Token) {
+    if (
+      !token.value.startsWith('import') &&
+      !token.value.startsWith('props') &&
+      !token.value.startsWith('use')
+    ) {
+      const value = token.value.trim();
+      this.ast.children.push({
+        type: 'LIQUID_TAG',
+        value,
+        line: token.line,
+        column: token.column,
+        hasOpeningHyphen: token.hasOpeningHyphen || false,
+        hasClosingHyphen: token.hasClosingHyphen || false,
+      });
+    }
+  }
+
+  private handleLiquidVariableToken(token: Token) {
+    const value = token.value.trim();
+    this.ast.children.push({
+      type: 'LIQUID_VARIABLE',
+      value,
+      line: token.line,
+      column: token.column,
+      hasOpeningHyphen: token.hasOpeningHyphen || false,
+      hasClosingHyphen: token.hasClosingHyphen || false,
+    });
+  }
+
+  private handleHtmlToken(token: Token) {
+    this.ast.children.push({
+      type: 'HTML',
+      value: token.value,
+      line: token.line,
+      column: token.column,
+    });
+  }
+
+  private handleTextToken(token: Token) {
+    this.ast.children.push({
+      type: 'TEXT',
+      value: token.value,
+      line: token.line,
+      column: token.column,
+    });
+  }
 }
+
