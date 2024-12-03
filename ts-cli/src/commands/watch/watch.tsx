@@ -1,7 +1,7 @@
-import React, { useContext, useState } from 'react';
+import React from 'react';
 import { Box, render, useApp, useInput } from 'ink';
 
-import type { FrameworkEnvironmentConfig, WatchCommandOptions } from '../../types/types.js';
+import type { WatchCommandOptions } from '../../types/types.js';
 
 import { EnvironmentSelector } from '@components/EnvironmentSelector.js';
 import { WatchLogger } from '@components/WatchLogger.js';
@@ -9,10 +9,9 @@ import { useFrameworkStore } from '@constants/stores.js';
 
 type Props = {
   args: WatchCommandOptions;
-  environments: Record<string, FrameworkEnvironmentConfig>;
 };
 
-export const Watch = ({ args, environments }: Props) => {
+export const Watch = ({ args }: Props) => {
   const app = useApp();
   const {environment} = useFrameworkStore((state) => state);
 
@@ -28,7 +27,7 @@ export const Watch = ({ args, environments }: Props) => {
       <Box flexDirection="column" borderStyle="bold" padding={2} margin={2} borderColor="green">
         {environment.accessToken === '' ||
         (!args?.environment && environment.accessToken === '') ? (
-          <EnvironmentSelector environments={environments} />
+          <EnvironmentSelector environments={globalThis.config.frameworkConfig.environments} />
         ) : (
           <WatchLogger args={args} />
         )}
@@ -38,6 +37,6 @@ export const Watch = ({ args, environments }: Props) => {
 
 export async function WatchCommand(args: any): Promise<void> {
   render(
-    <Watch args={args} environments={globalThis.config.frameworkConfig.framework.environments} />,
+    <Watch args={args} />,
   );
 }

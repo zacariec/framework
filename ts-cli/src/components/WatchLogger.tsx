@@ -10,8 +10,10 @@ import { processFile } from '@core/process.js';
 import { WatchEventEmitter, WatchEventEmitterEvents } from '@constants/events.js';
 import * as emoji from 'node-emoji';
 
-import type { WatchCommandOptions } from '../types/types.js';
+import type { LogState, LogType, WatchCommandOptions } from '../types/types.js';
 import { useFrameworkStore } from '@constants/stores.js';
+import { generateViteDevelopmentBuildConfig } from '@constants/vite.js';
+import { handleLogType } from '@utils/utils.js';
 
 const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
   Promise.all(
@@ -46,11 +48,6 @@ const handleWatcherSubscribe = (err: Error | null, events: watcher.Event[]) =>
 type Props = {
   args: WatchCommandOptions;
 };
-type LogType = 'info' | 'warning' | 'success' | 'error' | 'other';
-type LogState = {
-  message: string;
-  type: LogType;
-};
 
 export const WatchLogger = ({ args }: Props) => {
   const { key, environment } = useFrameworkStore((state) => state);
@@ -69,24 +66,6 @@ export const WatchLogger = ({ args }: Props) => {
     type: 'other',
   });
 
-  const handleLogType = (
-    type: LogType,
-  ): 'yellowBright' | 'blueBright' | 'greenBright' | 'redBright' | 'grey' => {
-    switch (type) {
-      case 'other':
-        return 'grey';
-      case 'warning':
-        return 'yellowBright';
-      case 'info':
-        return 'blueBright';
-      case 'success':
-        return 'greenBright';
-      case 'error':
-        return 'redBright';
-      default:
-        return 'blueBright';
-    }
-  };
 
   useEffect(() => {
     WatchEventEmitter.on(WatchEventEmitterEvents.WatchInfo, (message) =>
@@ -115,34 +94,12 @@ export const WatchLogger = ({ args }: Props) => {
       setViteLog({ message, type: 'warning' }),
     );
 
-    createServer({
-      ...globalThis.config.frameworkConfig.vite,
-      root: path.join(globalThis.config.inputPath, environment?.viteAssetDirectory ?? 'src'),
-      publicDir: false,
-      customLogger: {
-        info(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteInfo, message);
-        },
-        warn(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteWarning, message);
-        },
-        warnOnce(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteWarning, message);
-        },
-        error(message, options) {
-          WatchEventEmitter.emit(WatchEventEmitterEvents.ViteError, message);
-        },
-        clearScreen() {},
-        hasErrorLogged(error) {
-          return false;
-        },
-        hasWarned: false,
-      },
-      server: {
-        ...globalThis.config.frameworkConfig.vite?.server,
-        port: globalThis.config.vitePort,
-      },
-    })
+
+    createServer(
+      generateViteDevelopmentBuildConfig(
+        path.join(globalThis.config.inputPath, environment?.viteAssetDirectory ?? 'src'),
+      ),
+    )
       .then((server) => server.listen())
       .then((server) => {
         setViteServerUrl(server.resolvedUrls?.local[0]);
