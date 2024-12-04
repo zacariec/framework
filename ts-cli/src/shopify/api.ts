@@ -25,6 +25,32 @@ export class ShopifyAPI {
     this.themeId = `gid://shopify/OnlineStoreTheme/${config.themeId}`;
   }
 
+  private handleStatusCode(response: Response) {
+    switch (response.status) {
+      case 200:
+        // Response is OK
+        break;
+      case 400:
+        // Response is Bad Request
+        throw new Error(response.statusText);
+      case 402:
+        // Response is Payment Required
+        throw new Error(response.statusText);
+      case 403:
+        // Response is Forbidden Request
+        throw new Error(response.statusText);
+      case 404:
+        // Response is Not Found
+        throw new Error(response.statusText);
+      case 423:
+        // Response is Locked.
+        throw new Error(response.statusText);
+      default:
+        // Will be unexpected
+        throw new Error(response.statusText);
+    }
+  }
+
   /**
    * Sends a GraphQL request to the Shopify API.
    * @param {string} query - The GraphQL query string.
@@ -33,21 +59,17 @@ export class ShopifyAPI {
    * @throws {Error} If the HTTP request fails or if the API returns errors.
    * @private
    */
-  private async graphqlRequest(
+  private async graphqlRequest<T extends Record<string, unknown>>(
     query: string,
     variables: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<T> {
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: this.headers,
       body: JSON.stringify({ query, variables }),
     });
 
-    if (!response.ok) {
-      throw new Error(
-        `HTTP error! status: ${response.status} ${JSON.stringify(await response.json())}`,
-      );
-    }
+    this.handleStatusCode(response);
 
     const data = await response.json();
 
@@ -93,7 +115,7 @@ export class ShopifyAPI {
       ],
     };
 
-    const response = (await this.graphqlRequest(query, variables)) as Record<string, unknown>;
+    const response = (await this.graphqlRequest(query, variables));
     // eslint-disable-next-line prefer-destructuring
     const userErrors = response.themeFilesUpsert.userErrors;
     if (userErrors && userErrors.length > 0) {

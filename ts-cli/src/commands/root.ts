@@ -1,8 +1,9 @@
 import { Command } from 'commander';
 
 import buildCommand from '@commands/build/commander.js';
-import deployCommand from '@commands/deploy.js';
+import deployCommand from '@commands/deploy/commander.js';
 import watchCommand from '@commands/watch/commander.js';
+
 import { LogError, LogInfo } from '@utils/logger.js';
 import { version } from '../../package.json';
 import { loadFrameworkConfig, setupGlobalConfig } from '@config/config.js';
