@@ -26,3 +26,13 @@ export enum BuildEventEmitterEvents {
 }
 
 export const BuildEventEmitter = new EventEmitter().setMaxListeners(1);
+
+export enum DeployEventEmitterEvents {
+  UploadInfo = 'uploadInfo',
+  UploadSuccess = 'uploadSuccess',
+  UploadFail = 'uploadFail',
+  UploadFinished = 'uploadFinished',
+  IncrementProgress = 'incrementProgress',
+}
+
+export const DeployEventEmitter = new EventEmitter().setMaxListeners(1);
