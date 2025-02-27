@@ -128,7 +128,7 @@ export async function setupGlobalConfig(
   const environment = options.environment || 'development';
   const envConfig = frameworkConfig.environments[environment];
   const websocketServer = new WebSocketServer({
-    port: 8080, // TODO: Generate a port number
+    port: 0, // TODO: Generate a port number
   });
 
   // open connection to client.

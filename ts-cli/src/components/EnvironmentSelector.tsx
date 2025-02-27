@@ -1,22 +1,15 @@
 import React from 'react';
 import { Box, Newline, Text } from 'ink';
 import SelectInput from 'ink-select-input';
-import * as emoji from 'node-emoji';
 
 import type { Item } from 'node_modules/ink-select-input/build/SelectInput.js';
 import type { FrameworkEnvironmentConfig } from '../types/types.js';
+
 import { useFrameworkStore } from '@constants/stores.js';
+import { Indicator } from './Indicator.js';
 
 type Props = {
   environments: Record<string, FrameworkEnvironmentConfig>;
-};
-
-const Indicator = ({ isSelected }: { isSelected?: boolean }) => {
-  if (!isSelected) {
-    return <></>;
-  }
-
-  return <Text>{emoji.get(':point_right:')} </Text>;
 };
 
 export const EnvironmentSelector = ({ environments }: Props) => {

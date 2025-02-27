@@ -1,3 +1,3 @@
-import { run } from './commands/root';
+import { run } from './commands/root.js';
 
 run();

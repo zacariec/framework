@@ -138,6 +138,7 @@ export interface CommandOptions {
 export type BuildCommandOptions = CommandOptions;
 export type WatchCommandOptions = CommandOptions;
 export type DeployCommandOptions = CommandOptions;
+export type DownloadCommandOptions = CommandOptions;
 
 export interface ShopifyEnvironmentConfig {
   themeId: number;
@@ -227,6 +228,16 @@ export type LogType = 'info' | 'warning' | 'success' | 'error' | 'other';
 export type LogState = {
   message: string;
   type: LogType;
+};
+
+export type ThemeFileUtf8 = {
+  filename: string;
+  content: string;
+};
+
+export type ThemeFileBase64 = {
+  filename: string;
+  contentBase64: string;
 };
 
 declare global {

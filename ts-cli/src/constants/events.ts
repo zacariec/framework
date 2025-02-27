@@ -36,3 +36,12 @@ export enum DeployEventEmitterEvents {
 }
 
 export const DeployEventEmitter = new EventEmitter().setMaxListeners(1);
+
+export enum DownloadEventEmitterEvents {
+  DownloadSuccess = 'downloadSuccess',
+  DownloadInfo = 'downloadInfo',
+  DownloadFail = 'downloadFail',
+  DownloadFinished = 'downloadFinished',
+}
+
+export const DownloadEventEmitter = new EventEmitter().setMaxListeners(1);

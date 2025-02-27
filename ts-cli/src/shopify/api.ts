@@ -1,5 +1,6 @@
 import { LogInfo, LogSuccess } from '@utils/logger.js';
-import type { ShopifyConfig, ThemeInfo } from '../types/types.js';
+import type { ShopifyConfig, ThemeFileBase64, ThemeFileUtf8, ThemeInfo } from '../types/types.js';
+
 
 /**
  * Represents an API client for interacting with Shopify's GraphQL API.
@@ -69,6 +70,10 @@ export class ShopifyAPI {
       body: JSON.stringify({ query, variables }),
     });
 
+    if (response.headers.has('Content-Length')) {
+      console.log(response.headers.get('Content-Length'));
+    }
+
     this.handleStatusCode(response);
 
     const data = await response.json();
@@ -115,7 +120,7 @@ export class ShopifyAPI {
       ],
     };
 
-    const response = (await this.graphqlRequest(query, variables));
+    const response = await this.graphqlRequest(query, variables);
     // eslint-disable-next-line prefer-destructuring
     const userErrors = response.themeFilesUpsert.userErrors;
     if (userErrors && userErrors.length > 0) {
@@ -160,6 +165,47 @@ export class ShopifyAPI {
     }
   }
 
+  async getShopThemes(pageSize: number = 250): Promise<any[]> {
+    const query = `
+      query getThemes($first: Int!, $after: String) {
+        themes(first: $first, after: $after) {
+          edges {
+            node {
+              id
+              name
+              role
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    `;
+
+    const fetchThemes = async (cursor: string | null = null): Promise<any[]> => {
+      const variables = {
+        first: pageSize,
+        after: cursor,
+      };
+
+      const response = await this.graphqlRequest(query, variables);
+      const { themes } = response;
+
+      const currentThemes = themes.edges.map((edge: any) => edge.node);
+
+      if (themes.pageInfo.hasNextPage) {
+        const nextThemes = await fetchThemes(themes.pageInfo.endCursor);
+        return [...currentThemes, ...nextThemes];
+      }
+
+      return currentThemes;
+    };
+
+    return fetchThemes();
+  }
+
   /**
    * Retrieves information about the current theme.
    * @returns {Promise<ThemeInfo>} A promise that resolves with the theme information.
@@ -181,6 +227,70 @@ export class ShopifyAPI {
 
     const response = await this.graphqlRequest(query, variables);
     return response.theme as ThemeInfo;
+  }
+
+  /**
+   * Recursively retrieves all files from the current theme.
+   * @param {number} pageSize - The number of files to fetch per request.
+   * @returns {Promise<Array<{filename: string, content: string}>>} A promise that resolves with an array of theme files.
+   * @throws {Error} If fetching the theme files fails.
+   */
+  async getThemeFiles(themeId: string, pageSize: number = 50): Promise<Array<ThemeFileUtf8 | ThemeFileBase64>> {
+    const query = `
+      query getThemeFiles($id: ID!, $first: Int!, $after: String) {
+        theme(id: $id) {
+          files(first: $first, after: $after) {
+            edges {
+              node {
+                filename
+                body {
+                  ... on OnlineStoreThemeFileBodyText {
+                    content
+                  }
+                  ... on OnlineStoreThemeFileBodyBase64 {
+                    contentBase64
+                  }
+                }
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            userErrors {
+              code
+              filename
+            }
+          }
+        }
+      }
+    `;
+
+    const fetchFiles = async (cursor: string | null = null): Promise<Array<ThemeFileUtf8 | ThemeFileBase64>> => {
+      const variables = {
+        id: themeId,
+        first: pageSize,
+        after: cursor,
+      };
+
+      const response = await this.graphqlRequest(query, variables);
+      const { theme } = response;
+
+      const currentFiles = theme.files.edges.map((edge: any) => ({
+        filename: edge.node.filename,
+        ...(Object.keys(edge.node.body).includes('content') && { content: edge.node.body.content }),
+        ...(Object.keys(edge.node.body).includes('contentBase64') && { content: edge.node.body.contentBase64 }),
+      }));
+
+      if (theme.files.pageInfo.hasNextPage) {
+        const nextFiles = await fetchFiles(theme.files.pageInfo.endCursor);
+        return [...currentFiles, ...nextFiles];
+      }
+
+      return currentFiles;
+    };
+
+    return fetchFiles();
   }
 }
 

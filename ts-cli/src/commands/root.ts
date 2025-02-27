@@ -2,6 +2,7 @@ import { Command } from 'commander';
 
 import buildCommand from '@commands/build/commander.js';
 import deployCommand from '@commands/deploy/commander.js';
+import downloadCommand from '@commands/download/commander.js';
 import watchCommand from '@commands/watch/commander.js';
 
 import { LogError, LogInfo } from '@utils/logger.js';
@@ -21,8 +22,9 @@ existing Shopify Liquid Storefronts.`,
   )
   .version(version)
   .addCommand(buildCommand)
-  .addCommand(watchCommand)
-  .addCommand(deployCommand);
+  .addCommand(deployCommand)
+  .addCommand(downloadCommand)
+  .addCommand(watchCommand);
 
 program.hook('preAction', async (_thisCommand, actionCommand): Promise<void> => {
   // we should unwrap the config file here unless it's like a setup command etc.
