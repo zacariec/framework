@@ -1,12 +1,12 @@
 import { Command } from 'commander';
 
-import buildCommand from '@commands/build/commander.js';
-import deployCommand from '@commands/deploy/commander.js';
-import watchCommand from '@commands/watch/commander.js';
+import { buildCommand, deployCommand, watchCommand } from './index.js';
 
 import { LogError, LogInfo } from '@utils/logger.js';
 import { version } from '../../package.json';
 import { loadFrameworkConfig, setupGlobalConfig } from '@config/config.js';
+
+const COMMANDS = [buildCommand, watchCommand, deployCommand];
 
 const program = new Command();
 
@@ -19,10 +19,11 @@ providing a "framework" layer over the stock Liquid experience. Framework was de
 build to server first, fast by default, easy to use, developer-focused and a seamless integration for
 existing Shopify Liquid Storefronts.`,
   )
-  .version(version)
-  .addCommand(buildCommand)
-  .addCommand(watchCommand)
-  .addCommand(deployCommand);
+  .version(version);
+
+for (const command of COMMANDS) {
+  program.addCommand(command);
+}
 
 program.hook('preAction', async (_thisCommand, actionCommand): Promise<void> => {
   // we should unwrap the config file here unless it's like a setup command etc.

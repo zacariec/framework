@@ -1,26 +1,30 @@
+import path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import * as emoji from 'node-emoji';
+
 import React, { useEffect, useState } from 'react';
 import { Box, Newline, Text } from 'ink';
-import fs from 'node:fs/promises';
-import { build } from 'vite';
-import * as emoji from 'node-emoji';
-import { generateViteProductionBuildConfig } from '@constants/vite.js';
 import glob from 'fast-glob';
-import path from 'node:path';
+import { build } from 'vite';
+
+import { generateViteProductionBuildConfig } from '@constants/vite.js';
 import { sanitizeFilePath } from '@core/process.js';
 import { compiler } from '@core/compiler.js';
 import { BuildEventEmitter, BuildEventEmitterEvents } from '@constants/events.js';
 import { LogState } from '../types/types.js';
 import { handleLogType } from '@utils/utils.js';
-import { performance } from 'node:perf_hooks';
+import { FileSource } from '@core/vfs.js';
+import { LogWarning } from '@utils/logger.js';
 
 type Props = {};
 
 export function buildAssets(): Promise<unknown> {
+  const { srcPath, rootPath } = globalThis.config;
   return new Promise((resolve) => {
     build(
       generateViteProductionBuildConfig(
-        globalThis.config.rootPath,
-        glob.sync(path.join(globalThis.config.srcPath, '**/*.*')),
+        rootPath,
+        glob.sync(path.join(srcPath, '**/*.*')),
       ),
     )
       .then(resolve)
@@ -29,69 +33,73 @@ export function buildAssets(): Promise<unknown> {
 }
 
 export function transpileLiquid(): Promise<PromiseSettledResult<unknown>[]> {
+  const { configPath, layoutsPath, sectionsPath, snippetsPath, templatesPath, vfs, outputPath } = globalThis.config;
   const fileContent = [
-    globalThis.config.configPath,
-    globalThis.config.layoutsPath,
-    globalThis.config.sectionsPath,
-    globalThis.config.snippetsPath,
-    globalThis.config.templatesPath,
+    configPath,
+    layoutsPath,
+    sectionsPath,
+    snippetsPath,
+    templatesPath,
   ]
     .map((directory) => glob.sync(path.join(directory, '**/*.*')))
     .flat()
-    .map((file): Promise<Record<'filepath' | 'content', string>> => {
-      return new Promise(async (resolve, reject) => {
+    .map((file): Promise<Record<'filepath' | 'content', string>> => new Promise((resolve, reject) => {
         const filepath = sanitizeFilePath(file);
         const fullpath = file;
 
         if (path.extname(file) === '.json') {
-          const content = await fs.readFile(file, 'utf-8');
-          resolve({
-            filepath,
-            content,
-          });
+          vfs
+            .readFile(file, FileSource.LOCAL)
+            .then((content) => resolve({
+              filepath,
+              content,
+            }))
+            .catch(reject);
         }
 
-        try {
-          BuildEventEmitter.emit(BuildEventEmitterEvents.FrameworkInfo, `Reading ${file}`);
+        BuildEventEmitter.emit(BuildEventEmitterEvents.FrameworkInfo, `Reading ${file}`);
 
-          const content = await fs.readFile(file, 'utf-8');
-
-          try {
+        vfs
+          .readFile(file, FileSource.LOCAL)
+          .then((content) => {
             BuildEventEmitter.emit(BuildEventEmitterEvents.FrameworkInfo, `Compiling ${file}`);
+            compiler
+              .tokenize(content)
+              .parse()
+              .compile(fullpath)
+              .then((compiled) => {
+                BuildEventEmitter.emit(
+                  BuildEventEmitterEvents.FrameworkSuccess,
+                  `Successfully compiled & built ${file}`,
+                );
 
-            const compiled = await compiler.tokenize(content).parse().compile(fullpath);
-
-            BuildEventEmitter.emit(
-              BuildEventEmitterEvents.FrameworkSuccess,
-              `Successfully compiled & built ${file}`,
-            );
-
-            resolve({
-              filepath,
-              content: compiled,
-            });
-          } catch (error) {
+                resolve({
+                  filepath,
+                  content: compiled,
+                });
+              })
+              .catch((error) => {
+                BuildEventEmitter.emit(
+                  BuildEventEmitterEvents.FrameworkError,
+                  `Error compiling ${file}: ${error}`,
+                );
+              });
+          })
+          .catch((error) => {
             BuildEventEmitter.emit(
               BuildEventEmitterEvents.FrameworkError,
-              `Error compiling ${file}: ${error}`,
+              `Error reading ${file}: ${error}`,
             );
-          }
-        } catch (error) {
-          BuildEventEmitter.emit(
-            BuildEventEmitterEvents.FrameworkError,
-            `Error reading ${file}: ${error}`,
-          );
-        }
-      });
-    })
+          });
+      }))
     .flat();
 
   return new Promise((resolve, reject) => {
-    Promise.allSettled(fileContent)
-      .then((files) => {
-        return files.map((result): Promise<void> | void => {
+    Promise
+      .allSettled(fileContent)
+      .then((files) => (
+        files.map((result): Promise<void> | void => {
           if (result.status === 'rejected') {
-            // TODO: Fix with a better rejection.
             BuildEventEmitter.emit(
               BuildEventEmitterEvents.FrameworkError,
               `Error with Promise ${JSON.stringify(result)}`,
@@ -101,32 +109,57 @@ export function transpileLiquid(): Promise<PromiseSettledResult<unknown>[]> {
 
           return new Promise((resolve) => {
             const { filepath, content } = result.value;
-            const absolutePath = path.join(globalThis.config.outputPath, filepath);
+            const absolutePath = path.join(outputPath, filepath);
 
             BuildEventEmitter.emit(
               BuildEventEmitterEvents.FrameworkInfo,
               `Writing directory: ${absolutePath}`,
             );
 
-            fs.mkdir(path.dirname(absolutePath), { recursive: true })
-              .then(() => {
-                fs.writeFile(absolutePath, content, 'utf8').then(() => {
-                  BuildEventEmitter.emit(
-                    BuildEventEmitterEvents.FrameworkSuccess,
-                    `Wrote file: ${absolutePath}`,
-                  );
-                  resolve();
-                });
-              })
-              .catch((error) =>
-                BuildEventEmitter.emit(
-                  BuildEventEmitterEvents.FrameworkError,
-                  `Error writing files: ${error}`,
-                ),
-              );
-          });
-        });
-      })
+            
+            vfs.writeFile(absolutePath, content, FileSource.LOCAL)
+          })
+        })
+      ))
+      // .then((files) => {
+      //   return files.map((result): Promise<void> | void => {
+      //     if (result.status === 'rejected') {
+      //       // TODO: Fix with a better rejection.
+      //       BuildEventEmitter.emit(
+      //         BuildEventEmitterEvents.FrameworkError,
+      //         `Error with Promise ${JSON.stringify(result)}`,
+      //       );
+      //       return reject();
+      //     }
+
+      //     return new Promise((resolve) => {
+      //       const { filepath, content } = result.value;
+      //       const absolutePath = path.join(globalThis.config.outputPath, filepath);
+
+      //       BuildEventEmitter.emit(
+      //         BuildEventEmitterEvents.FrameworkInfo,
+      //         `Writing directory: ${absolutePath}`,
+      //       );
+
+      //       fs.mkdir(path.dirname(absolutePath), { recursive: true })
+      //         .then(() => {
+      //           fs.writeFile(absolutePath, content, 'utf8').then(() => {
+      //             BuildEventEmitter.emit(
+      //               BuildEventEmitterEvents.FrameworkSuccess,
+      //               `Wrote file: ${absolutePath}`,
+      //             );
+      //             resolve();
+      //           });
+      //         })
+      //         .catch((error) =>
+      //           BuildEventEmitter.emit(
+      //             BuildEventEmitterEvents.FrameworkError,
+      //             `Error writing files: ${error}`,
+      //           ),
+      //         );
+      //     });
+      //   });
+      // })
       .then((files) => {
         Promise.allSettled(files).then(resolve);
       })

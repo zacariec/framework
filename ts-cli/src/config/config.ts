@@ -12,6 +12,7 @@ import { LogError } from '@utils/logger.js';
 
 import type { CommandOptions, FrameworkConfig, GlobalConfig } from '../types/types.js';
 import { Command } from 'commander';
+import { createVirtualFileSystem } from '@core/vfs.js';
 
 /**
  * Checks if a file exists at the given path.
@@ -157,6 +158,13 @@ export async function setupGlobalConfig(
   const storeName = shopifyUrl.replace(/^https?:\/\//, '').split('.')[0];
 
   const vitePort = frameworkConfig.vitePort ?? 5173;
+  const shopifyClient = createShopifyAPI({
+    themeId: Number(options.themeId ?? envConfig.themeId),
+    shopifyUrl,
+    accessToken: options.accessToken ?? envConfig.accessToken,
+  });
+
+  const vfs = createVirtualFileSystem(shopifyClient, inputPath);
 
   globalThis.config = {
     command,
@@ -198,12 +206,11 @@ export async function setupGlobalConfig(
     },
 
     // Initialize Shopify client
-    shopifyClient: createShopifyAPI({
-      themeId: Number(options.themeId ?? envConfig.themeId),
-      shopifyUrl,
-      accessToken: options.accessToken ?? envConfig.accessToken,
-    }),
+    shopifyClient,
 
+    // Initialize virtual file system
+    vfs,
+    
     // Build configuration
     timestamp: Date.now(),
     buildId: nanoid(),

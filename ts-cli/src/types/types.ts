@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import type { PluginOption, UserConfig as ViteUserConfig } from 'vite';
 import type { WebSocketServer, WebSocket } from 'ws';
 import { ShopifyAPI } from '../shopify/api.js';
+import { VirtualFileSystem } from '@core/vfs.js';
 
 export enum TokenType {
   TEXT = 'TEXT',
@@ -212,6 +213,7 @@ export interface GlobalConfig {
     storeName: string;
   };
   shopifyClient: ShopifyAPI;
+  vfs: VirtualFileSystem;
   // Build configuration
   timestamp: number;
   buildId: string;
