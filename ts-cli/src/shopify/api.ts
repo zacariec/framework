@@ -80,6 +80,46 @@ export class ShopifyAPI {
     return data.data;
   }
 
+  async readFile(filename: string): Promise<Record<string, any>> {
+    LogInfo(`Reading ${filename} from Shopify`);
+    const query = `#graphql
+      query getFile($filename: String!, $themeId: ID!) {
+        theme(id: $themeId) {
+          files(first: 1, query: $filename) {
+            edges {
+              nodes {
+                body {
+                  ... on OnlineStoreThemeFileBodyText {
+                    content
+                  }
+                  ... on OnlineStoreThemeFileBodyBase64 {
+                    contentBase64
+                  }
+                }
+                checksumMd5
+                contentType
+                createdAt
+                filename
+                size
+                updatedAt
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      filename,
+      themeId: this.themeId,
+    };
+
+    const response = await this.graphqlRequest(query, variables);
+    const file = response?.theme?.files?.edges[0]?.node;
+    
+    return file;
+  }
+
   /**
    * Uploads a file to the Shopify theme.
    * @param {string} path - The path where the file should be uploaded.

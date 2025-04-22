@@ -56,6 +56,7 @@
     "eslint-plugin-import": "^2.31.0",
     "prettier": "^3.3.3",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^4.5.4"
+    "typescript": "^4.5.4",
+    "vitest": "^3.0.7"
   }
 }

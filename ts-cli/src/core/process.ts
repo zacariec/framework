@@ -1,10 +1,10 @@
 import path from 'node:path';
-import fs from 'node:fs/promises';
 
 import { compiler } from '@core/compiler.js'
 import { injectScripts } from '@core/inject.js';
 import { LogError, LogSuccess } from '@utils/logger.js';
 import { pathToFileURL } from 'node:url';
+import { FileSource } from '@core/vfs.js';
 
 export function sanitizeFilePath(filePath: string): string {
   const requiresHttp = process.platform !== 'win32' ? 'http:/' : '';
@@ -27,13 +27,13 @@ export async function processFile(filepath: string): Promise<void> {
   const {
     inputPath,
     isDevelopment,
-    // shopify,
-    // vitePort
+    vfs
   } = globalThis.config;
 
   try {
-    const content = await fs.readFile(filepath, 'utf-8');
     const sanitizedPath = sanitizeFilePath(filepath);
+    // Use VFS instead of direct fs access
+    const content = await vfs.readFile(filepath, FileSource.LOCAL);
     let compiledContent: string;
 
     // Compile all Liquid files
@@ -54,16 +54,16 @@ export async function processFile(filepath: string): Promise<void> {
       uploadContent = compiledContent;
     }
 
-    // Upload the content
-    await globalThis.config.shopifyClient.uploadFile(sanitizedPath, uploadContent);
-
+    // Use VFS to write the file remotely
+    await vfs.writeFile(sanitizedPath, uploadContent, FileSource.REMOTE);
+    
     globalThis.config.ws.send('reload');
 
     LogSuccess(`Processed, compiled, and uploaded: ${sanitizedPath}`);
   } catch (error) {
     // Add more detailed error information in development
     if (isDevelopment) {
-      return LogError('Full error:', error as Error);
+      LogError('Full error:', error as Error);
     }
 
     LogError(`Error processing ${filepath}: ${error}`);

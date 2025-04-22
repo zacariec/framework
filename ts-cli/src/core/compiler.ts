@@ -5,15 +5,29 @@ import { Tokenizer } from './tokenizer.js';
 import { ASTRootNode, Parser } from './parser.js';
 import { generateViteProductionBuildConfig } from '@constants/vite.js';
 
-import type { ASTNode, ImportNamedNode, ImportNode, LiquidNode, PropsNode, RootNode, TextNode, Token, UseNode } from '../types/types.js';
+import type {
+  ASTNode,
+  ImportNamedNode,
+  ImportNode,
+  LiquidNode,
+  PropsNode,
+  RootNode,
+  TextNode,
+  Token,
+  UseNode,
+} from '../types/types.js';
 
 // TODO: Make sure we're not creating a script for a default/named import.
 
 export class Compiler {
   private tokens: Token[];
+
   private ast: RootNode;
+
   private currentFile: string | undefined;
+
   public tokenizer: Tokenizer;
+
   public parser: Parser;
 
   constructor() {
@@ -34,12 +48,7 @@ export class Compiler {
     }
 
     try {
-      const result = await build(
-        generateViteProductionBuildConfig(
-          rootPath, 
-          absolutePath,
-        ),
-      );
+      const result = await build(generateViteProductionBuildConfig(rootPath, absolutePath));
 
       if (Array.isArray(result)) {
         const { output } = result[0];
@@ -68,7 +77,6 @@ export class Compiler {
         }
 
         return;
-
       }
 
       throw new Error(`No ${isCSS ? 'CSS' : 'JS'} output found`);
@@ -197,7 +205,7 @@ export class Compiler {
     return Promise.resolve(`{{${openingHyphen} ${value} ${closingHyphen}}}`);
   }
 
-  public tokenize(content: string) {
+  public tokenize(content: string): Compiler {
     const tokens = this.tokenizer.tokenize(content);
 
     this.tokens = tokens;
@@ -205,7 +213,7 @@ export class Compiler {
     return this;
   }
 
-  public parse() {
+  public parse(): Compiler {
     const ast = this.parser.parse(this.tokens);
 
     this.ast = ast;

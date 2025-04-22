@@ -14,7 +14,7 @@ export async function injectScripts(content: string): Promise<string> {
     const injectContent = `
     ${
       isDevelopment
-        ? `
+        ? `#javascript
 <script type="module" src="${viteServerUrl}/@vite/client"></script>
 <script type="module">
   window.FrameworkServer = ${JSON.stringify(globalThis.config.websocketServer.address())}
